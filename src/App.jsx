@@ -85,6 +85,12 @@ function getWeekLabel(weekStartTs) {
 }
 
 
+function photoRotation(id) {
+  let hash = 0;
+  for (let i = 0; i < id.length; i++) hash = (hash * 31 + id.charCodeAt(i)) | 0;
+  return ((Math.abs(hash) % 13) - 6);
+}
+
 function genId() {
   return Math.random().toString(36).slice(2) + Date.now().toString(36);
 }
@@ -1226,6 +1232,50 @@ export default function App() {
                         )}
                       </div>
 
+                      {/* Photo — taped to bottom-right corner, absolutely positioned */}
+                      {current?.photoUrl && (
+                        <div style={{
+                          position: "absolute",
+                          top: 20,
+                          right: 20,
+                          zIndex: 3,
+                          display: "inline-block",
+                        }}>
+                          {/* Tape strip */}
+                          <div style={{
+                            position: "absolute",
+                            top: -7,
+                            left: "50%",
+                            transform: "translateX(-50%)",
+                            width: 42,
+                            height: 12,
+                            background: "rgba(255,255,255,0.55)",
+                            borderRadius: 2,
+                            zIndex: 2,
+                            boxShadow: "0 1px 3px rgba(0,0,0,0.15)",
+                          }} />
+                          <img
+                            src={current.photoUrl}
+                            alt={current.name}
+                            onClick={() => { setLightboxUrl(current.photoUrl); setLightboxName(current.name); }}
+                            style={{
+                              width: 88,
+                              height: 66,
+                              objectFit: "cover",
+                              display: "block",
+                              borderRadius: 2,
+                              transform: `rotate(${photoRotation(current.id)}deg)`,
+                              boxShadow: "0 3px 12px rgba(0,0,0,0.5), 0 1px 3px rgba(0,0,0,0.3)",
+                              border: "3px solid #f0ebe4",
+                              position: "relative",
+                              zIndex: 1,
+                              cursor: "pointer",
+                            }}
+                          />
+                        </div>
+                      )}
+
+                      {/* Name — primary */}
                       <h2 style={S.cardName}>{current?.name}</h2>
 
                       {/* Birthday — secondary info, below name */}
