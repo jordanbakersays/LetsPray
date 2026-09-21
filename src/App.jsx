@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
-import { ChevronLeft, ChevronRight, Heart, Plus, Trash2, Upload, X, RefreshCw, BookOpen, RotateCcw, Cake, BarChart2, Bell, Star, Lightbulb } from "lucide-react";
+import { ChevronLeft, ChevronRight, Heart, Plus, Trash2, Upload, X, RefreshCw, BookOpen, RotateCcw, Cake, BarChart2, Bell, Star } from "lucide-react";
 
 const STORAGE_KEY = "intercede-people-v2";
 // Admin password and branding set during first-run setup (stored in localStorage)
@@ -1226,50 +1226,6 @@ export default function App() {
                         )}
                       </div>
 
-                      {/* Photo — taped to bottom-right corner, absolutely positioned */}
-                      {current?.photoUrl && (
-                        <div style={{
-                          position: "absolute",
-                          top: 20,
-                          right: 20,
-                          zIndex: 3,
-                          display: "inline-block",
-                        }}>
-                          {/* Tape strip */}
-                          <div style={{
-                            position: "absolute",
-                            top: -7,
-                            left: "50%",
-                            transform: "translateX(-50%)",
-                            width: 42,
-                            height: 12,
-                            background: "rgba(255,255,255,0.55)",
-                            borderRadius: 2,
-                            zIndex: 2,
-                            boxShadow: "0 1px 3px rgba(0,0,0,0.15)",
-                          }} />
-                          <img
-                            src={current.photoUrl}
-                            alt={current.name}
-                            onClick={() => { setLightboxUrl(current.photoUrl); setLightboxName(current.name); }}
-                            style={{
-                              width: 88,
-                              height: 66,
-                              objectFit: "cover",
-                              display: "block",
-                              borderRadius: 2,
-                              transform: `rotate(${photoRotation(current.id)}deg)`,
-                              boxShadow: "0 3px 12px rgba(0,0,0,0.5), 0 1px 3px rgba(0,0,0,0.3)",
-                              border: "3px solid #f0ebe4",
-                              position: "relative",
-                              zIndex: 1,
-                              cursor: "pointer",
-                            }}
-                          />
-                        </div>
-                      )}
-
-                      {/* Name — primary */}
                       <h2 style={S.cardName}>{current?.name}</h2>
 
                       {/* Birthday — secondary info, below name */}
@@ -1553,21 +1509,6 @@ export default function App() {
                         <button onClick={() => setEditNameFor(null)} style={S.reqCancelBtn}><X size={12} /></button>
                       </div>
                     ) : (
-                      <div style={{ ...S.nameRow, ...(p.id === justAddedId ? { background: C.accentBg, margin:"-8px -8px 0", padding:"8px 8px 0", borderRadius:"8px 8px 0 0" } : {}) }}>
-                        {/* Photo thumbnail / upload */}
-                        <label style={{ cursor:"pointer", display:"flex", alignItems:"center", marginRight:8, flexShrink:0, position:"relative" }} title="Upload photo">
-                          <input type="file" accept="image/*" style={{ display:"none" }} onChange={e => { if (e.target.files[0]) uploadPhoto(p.id, e.target.files[0]); e.target.value=""; }} />
-                          {uploadingPhotoFor === p.id
-                            ? <span style={{ fontSize:11, color:C.muted }}>…</span>
-                            : p.photoUrl
-                              ? <img src={p.photoUrl} style={{ width:28, height:28, objectFit:"cover", borderRadius:3, border:`1px solid ${C.border}` }} />
-                              : <span style={{ fontSize:16, opacity: p.id === justAddedId ? 1 : 0.4 }}>📷</span>
-                          }
-                          {p.id === justAddedId && !p.photoUrl && (
-                            <span style={{ position:"absolute", top:-18, left:"50%", transform:"translateX(-50%)", background:C.accent, color:"#fff", fontSize:9, fontWeight:600, borderRadius:4, padding:"2px 5px", whiteSpace:"nowrap", pointerEvents:"none" }}>Add photo</span>
-                          )}
-                        </label>
-                        <span style={S.personName}>{p.name}</span>
                         <button onClick={() => { setEditNameFor(p.id); setNameInput(p.name); setEditBdayFor(null); }}
                           style={S.editNameBtn} title="Edit name">✎</button>
                       </div>
@@ -1860,92 +1801,6 @@ export default function App() {
       {/* Reminders section */}
       {view === "pray" && (
       <div style={S.reminderSection}>
-        {/* Header row — always visible, tappable to expand/collapse */}
-        <button onClick={() => setReminderExpanded(e => { const next = !e; try { localStorage.setItem("intercede-reminder-expanded", String(next)); } catch (_e) {} return next; })} style={{ background:"none", border:"none", padding:0, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"space-between", width:"100%" }}>
-          <div style={{ display:"flex", alignItems:"center", gap:8 }}>
-            <Bell size={14} color={pushEnabled ? C.accent : C.muted} />
-            <p style={{ ...S.reminderTitle, color: pushEnabled ? C.accent : C.muted, margin:0 }}>
-              {pushEnabled ? `Reminders on · ${(() => { const [h, m] = pushTime.split(":").map(Number); const ampm = h >= 12 ? "PM" : "AM"; const h12 = h % 12 || 12; return `${h12}:${String(m).padStart(2,"0")} ${ampm}`; })()}` : "Daily Reminders"}
-            </p>
-          </div>
-          <span style={{ fontSize:10, color:C.muted, opacity:0.6 }}>{reminderExpanded ? "▲" : "▼"}</span>
-        </button>
-
-        {reminderExpanded && (<>
-          {/* iOS not on home screen */}
-          {pushSupported === "ios-prompt" && !showIosGuide && (
-            <button onClick={() => setShowIosGuide(true)} style={S.reminderSetupBtn}>
-              Set up reminders on iPhone
-            </button>
-          )}
-
-          {showIosGuide && (
-            <div style={S.iosGuide}>
-              <p style={S.iosGuideTitle}>Add to your Home Screen first:</p>
-              <div style={S.iosStep}><span style={S.iosStepNum}>1</span><span>Open this page in <strong style={{color:C.cream}}>Safari</strong> (not Chrome)</span></div>
-              <div style={S.iosStep}><span style={S.iosStepNum}>2</span><span>Tap the <strong style={{color:C.cream}}>Share</strong> button <span style={{fontSize:16}}>⎋</span> at the bottom</span></div>
-              <div style={S.iosStep}><span style={S.iosStepNum}>3</span><span>Tap <strong style={{color:C.cream}}>Add to Home Screen</strong></span></div>
-              <div style={S.iosStep}><span style={S.iosStepNum}>4</span><span>Open the app from your Home Screen and come back here</span></div>
-              <button onClick={() => setShowIosGuide(false)} style={S.iosDismiss}>Got it</button>
-            </div>
-          )}
-
-          {pushSupported === "ios-unsupported" && (
-            <p style={{ fontSize:12, color:C.muted, margin:0, lineHeight:1.6 }}>
-              Daily reminders require iOS 16.4 or later. Please update your iPhone to use this feature.
-            </p>
-          )}
-
-          {pushSupported === true && (
-            <div style={S.reminderControls}>
-              {pushEnabled ? (
-                <>
-                  <div style={S.reminderRow}>
-                    <span style={S.reminderLabel}>Reminder time</span>
-                    <input type="time" value={pushTime} onChange={e => updatePushTime(e.target.value)}
-                      style={S.timeInput} />
-                  </div>
-                  <button onClick={disablePush} style={S.reminderOffBtn}>Turn off reminders</button>
-                </>
-              ) : (
-                <>
-                  <div style={S.reminderRow}>
-                    <span style={S.reminderLabel}>Remind me daily at</span>
-                    <input type="time" value={pushTime} onChange={e => setPushTime(e.target.value)}
-                      style={S.timeInput} />
-                  </div>
-                  <button onClick={enablePush} disabled={pushLoading} style={S.reminderOnBtn}>
-                    {pushLoading ? "Setting up…" : "Enable reminders"}
-                  </button>
-                  {pushError && <p style={{ fontSize:12, color:"#c07070", margin:0, lineHeight:1.5 }}>{pushError}</p>}
-                </>
-              )}
-            </div>
-          )}
-        </>)}
-      </div>
-      )}
-
-      {/* Lightbox */}
-      {lightboxUrl && (
-        <div
-          onClick={() => setLightboxUrl(null)}
-          style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.85)", zIndex:100, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", gap:16, padding:24, backdropFilter:"blur(6px)" }}
-        >
-          <div style={{ position:"relative", display:"inline-block" }} onClick={e => e.stopPropagation()}>
-            {/* Tape */}
-            <div style={{ position:"absolute", top:-10, left:"50%", transform:"translateX(-50%)", width:72, height:16, background:"rgba(255,255,255,0.55)", borderRadius:2, zIndex:2, boxShadow:"0 1px 4px rgba(0,0,0,0.2)" }} />
-            <img
-              src={lightboxUrl.split("?")[0]}
-              alt={lightboxName}
-              style={{ display:"block", maxWidth:"min(600px, calc(100vw - 48px))", maxHeight:"70vh", objectFit:"contain", border:"4px solid #f0ebe4", borderRadius:2, boxShadow:"0 8px 40px rgba(0,0,0,0.8)", position:"relative", zIndex:1 }}
-            />
-          </div>
-          <p style={{ color:"rgba(255,255,255,0.7)", fontSize:16, fontFamily:"'Lora', Georgia, serif", margin:0 }}>{lightboxName}</p>
-          <p style={{ color:"rgba(255,255,255,0.35)", fontSize:12, margin:0, fontFamily:"'Inter', system-ui, sans-serif" }}>Tap anywhere to close</p>
-        </div>
-      )}
-
       {/* Admin footer link */}
       <div style={S.adminFooter}>
         {adminAuthed
