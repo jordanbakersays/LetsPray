@@ -1,16 +1,16 @@
 # Let's Pray
 
-A free, open-source prayer roster tool for youth ministry leaders. Built to help your team pray intentionally and consistently for every student and leader in your group.
+A free, open-source prayer tool for youth ministry leaders. Built to help your team pray intentionally and consistently for every student and leader in your group.
 
-**Built by Jordan Baker** — youth pastor at Calvary Baptist Church in Westland, Michigan.
+**Built by Jordan Baker** — youth pastor at Calvary Baptist Church in Canton, Michigan.
 
 ---
 
-> 👋 If this tool is useful for your ministry, I'd love it if you checked out my resources on DYM. Your support helps me keep building free tools like this one.
+> 👋 If this tool is useful for your ministry, I'd love it if you checked out my resources on Download Youth Ministry. Your support helps me keep building free tools like this one.
 >
 > **[Browse my resources at DYM →](https://www.downloadyouthministry.com/contributors/jordan-baker)**
 >
-> If you've used something from DYM, leaving a review goes a long way. Thank you!
+> If you've used one of my resources from DYM, leaving a review goes a long way. Thank you!
 
 ---
 
@@ -32,13 +32,13 @@ You will need a free [Cloudflare](https://cloudflare.com) account. Cloudflare ho
 
 ### Step 1 — Fork this repo
 
-Click **Fork** in the top right of this GitHub page to create your own copy.
+Click **Fork** in the top right of this GitHub page to create your own copy. You'll need to sign up for a free GitHub account.
 
 ### Step 2 — Create a Cloudflare KV namespace
 
 This is where your roster data will be stored.
 
-1. Log into [dash.cloudflare.com](https://dash.cloudflare.com)
+1. Log into [dash.cloudflare.com](https://dash.cloudflare.com) (Create a free Cloudflare account if you don't already have one)
 2. In the left sidebar click **Storage & Databases → KV**
 3. Click **Create namespace**
 4. Name it `LETSPRAY_KV` and click **Add**
