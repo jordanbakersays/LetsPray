@@ -1509,8 +1509,9 @@ export default function App() {
                         <button onClick={() => setEditNameFor(null)} style={S.reqCancelBtn}><X size={12} /></button>
                       </div>
                     ) : (
-                        <button onClick={() => { setEditNameFor(p.id); setNameInput(p.name); setEditBdayFor(null); }}
-                          style={S.editNameBtn} title="Edit name">✎</button>
+                      <div style={S.nameRow}>
+                        <span style={S.personName}>{p.name}</span>
+                        <button onClick={() => { setEditNameFor(p.id); setNameInput(p.name); setEditBdayFor(null); }} style={S.editNameBtn} title="Edit name">✎</button>
                       </div>
                     )}
                     <div style={S.personMeta}>
