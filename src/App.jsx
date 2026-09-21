@@ -585,33 +585,6 @@ function App() {
   const [pendingView, setPendingView] = useState(null);
 
   useEffect(() => {
-    // Check if push notifications are supported
-    const isIos = /iphone|ipad|ipod/i.test(navigator.userAgent);
-    const isStandalone = window.navigator.standalone === true;
-    const hasSW = "serviceWorker" in navigator;
-    const hasPush = "PushManager" in window;
-
-    if (hasSW && hasPush) {
-      // Full push support (Android, or iOS 16.4+ on home screen)
-      setPushSupported(true);
-      navigator.serviceWorker.ready.then(reg => {
-        reg.pushManager.getSubscription().then(sub => {
-          if (sub) setPushEnabled(true);
-        });
-      }).catch(() => {});
-    } else if (isIos && !isStandalone) {
-      // iOS in browser — needs to add to home screen first
-      setPushSupported("ios-prompt");
-    } else if (isIos && isStandalone && !hasPush) {
-      // iOS on home screen but iOS < 16.4 — push not supported
-      setPushSupported("ios-unsupported");
-    } else if (hasSW && !hasPush) {
-      // SW available but no PushManager — unsupported browser
-      setPushSupported(false);
-    }
-  }, []);
-
-  useEffect(() => {
     const link = document.createElement("link");
     link.rel = "stylesheet";
     link.href = "https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,500;0,600;1,400;1,500&family=Inter:wght@300;400;500;600&display=swap";
