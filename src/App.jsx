@@ -505,7 +505,28 @@ function SetupScreen({ onComplete }) {
   );
 }
 
-export default function App() {
+class ErrorBoundary extends React.Component {
+  constructor(props) { super(props); this.state = { error: null }; }
+  static getDerivedStateFromError(e) { return { error: e }; }
+  render() {
+    if (this.state.error) {
+      return (
+        <div style={{ minHeight:"100vh", background:"#1a1c1e", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", padding:32, fontFamily:"monospace" }}>
+          <p style={{ color:"#c07070", fontSize:16, marginBottom:16 }}>Something went wrong:</p>
+          <pre style={{ color:"#e8e0d4", fontSize:13, whiteSpace:"pre-wrap", maxWidth:500, background:"#222527", padding:16, borderRadius:8 }}>{this.state.error.message}</pre>
+          <p style={{ color:"#7a8082", fontSize:12, marginTop:16 }}>Open browser console for full details.</p>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
+export default function WrappedApp() {
+  return <ErrorBoundary><App /></ErrorBoundary>;
+}
+
+function App() {
   const [setup, setSetup] = React.useState(() => getSetup());
   if (!setup) return <SetupScreen onComplete={s => setSetup(s)} />;
   const ADMIN_PASSWORD = setup.password;
