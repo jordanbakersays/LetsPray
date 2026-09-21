@@ -1799,9 +1799,6 @@ export default function App() {
 
         </div>
       )}
-      {/* Reminders section */}
-      {view === "pray" && (
-      <div style={S.reminderSection}>
       {/* Admin footer link */}
       <div style={S.adminFooter}>
         {adminAuthed
