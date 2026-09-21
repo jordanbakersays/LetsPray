@@ -104,7 +104,7 @@ To lock the admin view, tap **lock admin** at the bottom.
 
 Push notifications let each leader opt into a daily reminder at a time they choose. This requires an additional setup step.
 
-> ⚠️ **iPhone note:** Push notifications on iPhone require the app to be saved to the Home Screen and opened from there. Chrome on iPhone does not support web push. Your leaders will need to use Safari and add the app to their Home Screen.
+> ⚠️ **iPhone note:** Push notifications on iPhone require the app to be saved to the Home Screen and opened from there. Chrome on iPhone does not support web push. Your leaders will need to use Safari and add the app to their Home Screen. Adding this feature will display an easy walkthrough to help Apple and Android users quickly add reminder notifications.
 
 ### What you'll need
 
@@ -113,27 +113,15 @@ Push notifications let each leader opt into a daily reminder at a time they choo
 
 ### Step A1 — Generate VAPID keys
 
-VAPID keys are how the browser authenticates push notifications. You can generate them using Node.js:
+VAPID keys are how the browser authenticates push notifications. The easiest way to generate them is using this free online tool — no software installation required:
 
-```bash
-node -e "
-const crypto = require('crypto');
-const { privateKey, publicKey } = crypto.generateKeyPairSync('ec', { namedCurve: 'P-256' });
-const pubDer = publicKey.export({ type: 'spki', format: 'der' });
-const pubRaw = pubDer.slice(pubDer.length - 65);
-const pubB64 = pubRaw.toString('base64').replace(/\+/g,'-').replace(/\//g,'_').replace(/=/g,'');
-const privDer = privateKey.export({ type: 'pkcs8', format: 'der' });
-let privStart = -1;
-for (let i = 0; i < privDer.length - 32; i++) {
-  if (privDer[i] === 0x04 && privDer[i+1] === 0x20) { privStart = i + 2; break; }
-}
-const privB64 = privDer.slice(privStart, privStart + 32).toString('base64').replace(/\+/g,'-').replace(/\//g,'_').replace(/=/g,'');
-console.log('PUBLIC:', pubB64);
-console.log('PRIVATE:', privB64);
-"
-```
+1. Open this page in your browser: **https://vapidkeys.com**
+2. Click **Generate**
+3. You'll see two keys — copy and save both somewhere safe (like a notes app):
+   - **Public Key** — a long string starting with `B`
+   - **Private Key** — a shorter string
 
-Save both keys — you'll need them in a moment.
+You'll need both in Steps A3 and A5 below. Don't share the private key with anyone.
 
 ### Step A2 — Add the push functions to your Pages project
 
@@ -142,6 +130,15 @@ Add these two files to your GitHub repo under `functions/api/`:
 **`functions/api/push-register.js`** and **`functions/api/push-check.js`**
 
 You can find the contents of both files in the `appendix/push/` folder of this repo.
+
+### Step A2 — Add the push functions to your Pages project
+
+Add these two files to your GitHub repo under `functions/api/`:
+
+**`functions/api/push-register.js`** and **`functions/api/push-check.js`**
+
+You can find the contents of both files in the `appendix/push/` folder of this repo.
+
 
 ### Step A3 — Update App.jsx
 
