@@ -589,6 +589,7 @@ function AppMain({ settings }) {
   const [addName, setAddName] = useState("");
   const [addType, setAddType] = useState("student");
   const [addGroup, setAddGroup] = useState("hs");
+  const [addSmallGroupLeader, setAddSmallGroupLeader] = useState("");
   const [search, setSearch] = useState("");
   const [editBdayFor, setEditBdayFor] = useState(null);
   const [editNameFor, setEditNameFor] = useState(null);
@@ -954,10 +955,22 @@ function AppMain({ settings }) {
 
   function addPerson() {
     if (!addName.trim()) return;
-    setPeople(prev => [...prev, { id: genId(), name: addName.trim(), type: addType, group: addType === "student" ? addGroup : null, grade: addType === "student" && addGrade ? Number(addGrade) : null, active: true, prayedAt: null, prayerRequests: [], birthday: addBday.trim() || "", updatedAt: Date.now() }]);
-    setAddBday("");
+setPeople(prev => [...prev, {
+  id: genId(),
+  name: addName.trim(),
+  type: addType,
+  group: addType === "student" ? addGroup : null,
+  smallGroupLeader: addType === "student" ? addSmallGroupLeader : "",
+  grade: addType === "student" && addGrade ? Number(addGrade) : null,
+  active: true,
+  prayedAt: null,
+  prayerRequests: [],
+  birthday: addBday.trim() || "",
+  updatedAt: Date.now()
+}]);    setAddBday("");
     setAddName("");
-    setAddGrade("");
+    setAddGrade(""); 
+    setAddSmallGroupLeader("");
   }
 
   function cycleGroup(id) {
@@ -1508,7 +1521,23 @@ function AppMain({ settings }) {
                   {[5,6,7,8,9,10,11,12].map(g => <option key={g} value={g}>{g}</option>)}
                 </select>
               )}
-            </div>
+</div>
+
+{addType === "student" && (
+  <select
+    value={addSmallGroupLeader}
+    onChange={e => setAddSmallGroupLeader(e.target.value)}
+    style={{ ...S.addTypeSelect, width:"100%" }}
+  >
+    <option value="">No Small Group Leader</option>
+    {people
+      .filter(p => p.active !== false && p.type === "leader")
+      .sort((a, b) => a.name.localeCompare(b.name))
+      .map(p => (
+        <option key={p.id} value={p.id}>{p.name}</option>
+      ))}
+  </select>
+)}
             <div style={{ display:"flex", gap:8 }}>
               <input value={addBday} onChange={e => setAddBday(e.target.value)} placeholder="Birthday MM-DD (optional)" style={{ ...S.addInput, flex:1, margin:0, fontSize:13 }} />
               <button onClick={addPerson} style={{ ...S.addPersonBtn, width:44, height:44 }}><Plus size={18} /></button>
