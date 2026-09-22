@@ -1,10 +1,18 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
-import { ChevronLeft, ChevronRight, Heart, Plus, Trash2, Upload, X, RefreshCw, BookOpen, RotateCcw, Cake, BarChart2, Bell, Star } from "lucide-react";
+import { ChevronLeft, ChevronRight, Heart, Plus, Trash2, Upload, X, RefreshCw, BookOpen, RotateCcw, Cake, BarChart2, Bell, Star, Lightbulb } from "lucide-react";
 
 const STORAGE_KEY = "intercede-people-v2";
-// Admin password and branding set during first-run setup (stored in localStorage)
-const SETUP_KEY = "letspray-setup";
+const ADMIN_PASSWORD = "Promo1398!";
+// PUSH: Paste your VAPID public key here and uncomment:
+// const VAPID_PUBLIC_KEY = "YOUR_VAPID_PUBLIC_KEY_HERE";
 
+// PUSH: uncomment this function to enable push notifications
+// function urlBase64ToUint8Array(base64String) {
+//   const padding = "=".repeat((4 - base64String.length % 4) % 4);
+//   const base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/");
+//   const rawData = atob(base64);
+//   return Uint8Array.from([...rawData].map(c => c.charCodeAt(0)));
+// }
 const TAP_KEY = "intercede-tap-ts";
 const TAP_TTL = 24 * 60 * 60 * 1000;
 
@@ -63,7 +71,24 @@ async function apiSave(people, force = false) {
   });
 }
 
-
+// PUSH: uncomment function below to enable
+// async function apiRegisterPush(subscription, reminderTime) {
+//   await fetch("/api/push-register", {
+//     method: "POST",
+//     headers: { "Content-Type": "application/json" },
+//     body: JSON.stringify({ subscription, reminderTime }),
+//   });
+// }
+// 
+// PUSH: uncomment function below to enable
+// async function apiMarkSeen(endpointHash) {
+//   await fetch("/api/push-check", {
+//     method: "POST",
+//     headers: { "Content-Type": "application/json" },
+//     body: JSON.stringify({ endpointHash }),
+//   });
+// }
+// 
 async function apiLoadHistory() {
   const res = await fetch("/api/history");
   if (!res.ok) return [];
@@ -84,10 +109,30 @@ function getWeekLabel(weekStartTs) {
   return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "America/New_York" });
 }
 
-
+// Stable per-person rotation so the card looks the same each load but varies per person
+// PHOTO: uncomment function below to enable
+// async function resizeImage(file, maxSize) {
+//   return new Promise((resolve) => {
+//     const img = new Image();
+//     const url = URL.createObjectURL(file);
+//     img.onload = () => {
+//       URL.revokeObjectURL(url);
+//       const scale = Math.min(1, maxSize / Math.max(img.width, img.height));
+//       const w = Math.round(img.width * scale);
+//       const h = Math.round(img.height * scale);
+//       const canvas = document.createElement("canvas");
+//       canvas.width = w; canvas.height = h;
+//       canvas.getContext("2d").drawImage(img, 0, 0, w, h);
+//       canvas.toBlob(resolve, "image/jpeg", 0.85);
+//     };
+//     img.src = url;
+//   });
+// }
+// 
 function photoRotation(id) {
   let hash = 0;
   for (let i = 0; i < id.length; i++) hash = (hash * 31 + id.charCodeAt(i)) | 0;
+  // Range: -6 to +6 degrees
   return ((Math.abs(hash) % 13) - 6);
 }
 
@@ -461,78 +506,7 @@ function AllPrayedScreen({ prayedCount, praySessionCount, total, onWeek, onKeepP
   );
 }
 
-
-function getSetup() {
-  try { const r = localStorage.getItem("letspray-setup"); return r ? JSON.parse(r) : null; }
-  catch (_e) { return null; }
-}
-
-function SetupScreen({ onComplete }) {
-  const [name, setName] = React.useState("");
-  const [sub, setSub] = React.useState("");
-  const [pw, setPw] = React.useState("");
-  const [pw2, setPw2] = React.useState("");
-  const [err, setErr] = React.useState("");
-
-  function submit() {
-    if (!name.trim()) return setErr("Please enter your ministry name.");
-    if (pw.length < 6) return setErr("Password must be at least 6 characters.");
-    if (pw !== pw2) return setErr("Passwords don’t match.");
-    const data = { name: name.trim(), sub: sub.trim(), password: pw };
-    try { localStorage.setItem("letspray-setup", JSON.stringify(data)); } catch (_e) {}
-    onComplete(data);
-  }
-
-  const inputStyle = { width:"100%", boxSizing:"border-box", background:"#222527", border:"1px solid #333839", borderRadius:10, color:"#e8e0d4", padding:"12px 14px", fontSize:15, fontFamily:"'Inter', system-ui, sans-serif", outline:"none" };
-  const labelStyle = { fontSize:11, color:"#7a8082", textTransform:"uppercase", letterSpacing:"0.06em", fontWeight:600, display:"block", marginBottom:5 };
-
-  return (
-    <div style={{ minHeight:"100vh", background:"#1a1c1e", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", padding:"32px 24px" }}>
-      <svg width="48" height="48" viewBox="0 0 20 20" style={{ marginBottom:16 }}>
-        <path d="M10,2 L11.768,8.232 L18,10 L11.768,11.768 L10,18 L8.232,11.768 L2,10 L8.232,8.232 Z" fill="#6b9e78" />
-      </svg>
-      <h1 style={{ fontFamily:"'Lora', Georgia, serif", fontSize:28, fontWeight:600, color:"#e8e0d4", margin:"0 0 6px", textAlign:"center" }}>Let’s Pray</h1>
-      <p style={{ fontSize:13, color:"#7a8082", margin:"0 0 32px", textAlign:"center" }}>First-time setup — takes about 30 seconds</p>
-      <div style={{ width:"100%", maxWidth:360, display:"flex", flexDirection:"column", gap:12 }}>
-        <div><label style={labelStyle}>Ministry Name</label><input value={name} onChange={e => setName(e.target.value)} placeholder="e.g. First Baptist Students" style={inputStyle} /></div>
-        <div><label style={labelStyle}>Subtitle <span style={{ opacity:0.5, fontWeight:400, textTransform:"none" }}>(optional)</span></label><input value={sub} onChange={e => setSub(e.target.value)} placeholder='e.g. "Let’s Pray" or leave blank' style={inputStyle} /></div>
-        <div><label style={labelStyle}>Admin Password</label><input type="password" value={pw} onChange={e => setPw(e.target.value)} placeholder="Choose a password (6+ characters)" style={inputStyle} /></div>
-        <div><label style={labelStyle}>Confirm Password</label><input type="password" value={pw2} onChange={e => setPw2(e.target.value)} onKeyDown={e => e.key === "Enter" && submit()} placeholder="Re-enter password" style={inputStyle} /></div>
-        {err && <p style={{ color:"#c07070", fontSize:13, margin:0 }}>{err}</p>}
-        <button onClick={submit} style={{ background:"#6b9e78", border:"none", color:"#fff", borderRadius:12, padding:"14px 0", fontSize:15, fontWeight:600, cursor:"pointer", fontFamily:"'Inter', system-ui, sans-serif", marginTop:4 }}>Get Started</button>
-      </div>
-    </div>
-  );
-}
-
-class ErrorBoundary extends React.Component {
-  constructor(props) { super(props); this.state = { error: null }; }
-  static getDerivedStateFromError(e) { return { error: e }; }
-  render() {
-    if (this.state.error) {
-      return (
-        <div style={{ minHeight:"100vh", background:"#1a1c1e", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", padding:32, fontFamily:"monospace" }}>
-          <p style={{ color:"#c07070", fontSize:16, marginBottom:16 }}>Something went wrong:</p>
-          <pre style={{ color:"#e8e0d4", fontSize:13, whiteSpace:"pre-wrap", maxWidth:500, background:"#222527", padding:16, borderRadius:8 }}>{this.state.error.message}</pre>
-          <p style={{ color:"#7a8082", fontSize:12, marginTop:16 }}>Open browser console for full details.</p>
-        </div>
-      );
-    }
-    return this.props.children;
-  }
-}
-
-export default function WrappedApp() {
-  return <ErrorBoundary><App /></ErrorBoundary>;
-}
-
-function App() {
-  const [setup, setSetup] = React.useState(() => getSetup());
-  if (!setup) return <SetupScreen onComplete={s => setSetup(s)} />;
-  const ADMIN_PASSWORD = setup.password;
-  const MINISTRY_NAME = setup.name;
-  const MINISTRY_SUB = setup.sub || "";
-
+export default function App() {
   const [people, setPeople] = useState([]);
   const [loaded, setLoaded] = useState(false);
   const [view, setView] = useState("pray");
@@ -562,6 +536,15 @@ function App() {
   const [nameInput, setNameInput] = useState("");
   const [confirmPromo, setConfirmPromo] = useState(false);
   const [confirmClearInactive, setConfirmClearInactive] = useState(false);
+  // PUSH: Uncomment the following state variables to enable push notifications:
+  // const [pushSupported, setPushSupported] = useState(false);
+  // const [pushEnabled, setPushEnabled] = useState(false);
+  // const [pushTime, setPushTime] = useState(() => localStorage.getItem("intercede-push-time") || "09:00");
+  // const [showIosGuide, setShowIosGuide] = useState(false);
+  // const [pushLoading, setPushLoading] = useState(false);
+  // const [pushError, setPushError] = useState("");
+  // const [reminderExpanded, setReminderExpanded] = useState(() => { try { return localStorage.getItem('intercede-reminder-expanded') !== 'false'; } catch { return true; } });
+  // 
   const [weekHistory, setWeekHistory] = useState([]);
   const [bdayInput, setBdayInput] = useState("");
 
@@ -583,6 +566,47 @@ function App() {
   const [adminPwInput, setAdminPwInput] = useState("");
   const [adminPwError, setAdminPwError] = useState("");
   const [pendingView, setPendingView] = useState(null);
+
+  // PUSH: Uncomment the following useEffect to enable push detection:
+  // useEffect(() => {
+  // // Check if push notifications are supported
+  // const isIos = /iphone|ipad|ipod/i.test(navigator.userAgent);
+  // const isStandalone = window.navigator.standalone === true;
+  // const hasSW = "serviceWorker" in navigator;
+  // const hasPush = "PushManager" in window;
+  //
+  // if (hasSW && hasPush) {
+  // // Full push support (Android, or iOS 16.4+ on home screen)
+  // setPushSupported(true);
+  // navigator.serviceWorker.ready.then(reg => {
+  // reg.pushManager.getSubscription().then(sub => {
+  // if (sub) setPushEnabled(true);
+  // });
+  // }).catch(() => {});
+  // } else if (isIos && !isStandalone) {
+  // // iOS in browser — needs to add to home screen first
+  // setPushSupported("ios-prompt");
+  // } else if (isIos && isStandalone && !hasPush) {
+  // // iOS on home screen but iOS < 16.4 — push not supported
+  // setPushSupported("ios-unsupported");
+  // } else if (hasSW && !hasPush) {
+  // // SW available but no PushManager — unsupported browser
+  // setPushSupported(false);
+  // }
+  // // Register service worker and mark device as seen today
+  // if ("serviceWorker" in navigator) {
+  // navigator.serviceWorker.register("/sw.js").then(reg => {
+  // reg.pushManager.getSubscription().then(sub => {
+  // if (sub) {
+  // const hash = btoa(sub.endpoint).slice(0, 40);
+  // apiMarkSeen(hash).catch(() => {});
+  // }
+  // });
+  // }).catch(() => {});
+  // } else {
+  // apiMarkSeen(null).catch(() => {});
+  // }
+  // }, []);
 
   useEffect(() => {
     const link = document.createElement("link");
@@ -763,6 +787,17 @@ function App() {
   const pinnedPerson = pinnedPersonId ? activePeople.find(p => p.id === pinnedPersonId) ?? null : null;
   const current = pinnedPerson ?? deck[cardIdx] ?? null;
 
+  // PHOTO: Uncomment photo preload effect:
+  // // Preload adjacent photos so they're cached before the swipe animation ends
+  // React.useEffect(() => {
+  // const toPreload = [deck[cardIdx - 1], deck[cardIdx + 1]].filter(Boolean);
+  // toPreload.forEach(p => {
+  // if (p?.photoUrl) {
+  // const img = new Image();
+  // img.src = p.photoUrl;
+  // }
+  // });
+  // }, [cardIdx, deck]);
   const prayedPeople = activePeople.filter(p => withinWeek(p.prayedAt));
 
   // Streak: consecutive weeks where count >= total (everyone prayed for)
@@ -913,6 +948,10 @@ function App() {
 
   const [addGrade, setAddGrade] = useState("");
   const [addBday, setAddBday] = useState("");
+  // PHOTO: const [justAddedId, setJustAddedId] = useState(null);
+  // PHOTO: const [uploadingPhotoFor, setUploadingPhotoFor] = useState(null);
+  // PHOTO: const [lightboxUrl, setLightboxUrl] = useState(null);
+  // PHOTO: const [lightboxName, setLightboxName] = useState(null);
   const [peopleSort, setPeopleSort] = useState("name");
   const [peopleTypeFilter, setPeopleTypeFilter] = useState("all");
   const [rosterGroup, setRosterGroup] = useState("all"); // all | ms | hs | leader
@@ -920,13 +959,10 @@ function App() {
 
   function addPerson() {
     if (!addName.trim()) return;
-    const newId = genId();
-    setPeople(prev => [...prev, { id: newId, name: addName.trim(), type: addType, group: addType === "student" ? addGroup : null, grade: addType === "student" && addGrade ? Number(addGrade) : null, active: true, prayedAt: null, prayerRequests: [], birthday: addBday.trim() || "", updatedAt: Date.now() }]);
+    setPeople(prev => [...prev, { id: genId(), name: addName.trim(), type: addType, group: addType === "student" ? addGroup : null, grade: addType === "student" && addGrade ? Number(addGrade) : null, active: true, prayedAt: null, prayerRequests: [], birthday: addBday.trim() || "", updatedAt: Date.now() }]);
     setAddBday("");
     setAddName("");
     setAddGrade("");
-    setJustAddedId(newId);
-    setTimeout(() => setJustAddedId(null), 8000);
   }
 
   function cycleGroup(id) {
@@ -943,7 +979,80 @@ function App() {
 
   function deactivate(id) { setPeople(prev => prev.map(p => p.id === id ? { ...p, active: false, updatedAt: Date.now() } : p)); }
   function restore(id) { setPeople(prev => prev.map(p => p.id === id ? { ...p, active: true, updatedAt: Date.now() } : p)); }
+  // PHOTO: Uncomment uploadPhoto to enable photos:
+  // async function uploadPhoto(personId, file) {
+  // setUploadingPhotoFor(personId);
+  // try {
+  // // Resize client-side before upload
+  // const resized = await resizeImage(file, 600);
+  // const form = new FormData();
+  // form.append("photo", resized, "photo.jpg");
+  // form.append("personId", personId);
+  // const res = await fetch("/api/photo-upload", { method: "POST", body: form });
+  // const data = await res.json();
+  // if (data.url) {
+  // setPeople(prev => prev.map(p => p.id === personId
+  // ? { ...p, photoUrl: data.url + "?t=" + Date.now(), updatedAt: Date.now() }
+  // : p
+  // ));
+  // } else {
+  // alert("Upload error: " + JSON.stringify(data));
+  // }
+  // } catch (e) { alert("Upload failed: " + e.message); }
+  // setUploadingPhotoFor(null);
+  // }
+  //
 
+  // PHOTO: Uncomment deletePhoto to enable photos:
+  // async function deletePhoto(personId) {
+  // await fetch("/api/photo-upload", {
+  // method: "DELETE",
+  // headers: { "Content-Type": "application/json" },
+  // body: JSON.stringify({ personId }),
+  // }).catch(() => {});
+  // setPeople(prev => prev.map(p => p.id === personId
+  // ? { ...p, photoUrl: null, updatedAt: Date.now() }
+  // : p
+  // ));
+  // }
+  //
+
+  function exportRoster() {
+    const rows = [
+      ["First Name", "Last Name", "Type", "Group", "Grade", "Birthday"],
+      ...people.filter(p => p.active !== false).map(p => {
+        const [first, ...rest] = (p.name || "").trim().split(" ");
+        const last = rest.join(" ");
+        return [first, last, p.type || "", (p.group || "").toUpperCase(), p.grade || "", p.birthday || ""];
+      })
+    ];
+    const csv = rows.map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(",")).join("\n");
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "calvary-students-roster.csv";
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  function clearAllInactive() {
+    setPeople(prev => {
+      const filtered = prev.filter(p => p.active !== false);
+      // Save immediately — don't wait for debounce
+      apiSave(filtered, true).catch(() => {});
+      return filtered;
+    });
+    setConfirmClearInactive(false);
+  }
+
+  function deletePerm(id) {
+    setPeople(prev => {
+      const filtered = prev.filter(p => p.id !== id);
+      apiSave(filtered, true).catch(() => {});
+      return filtered;
+    });
+  }
 
   function saveBirthday(id, val) {
     setPeople(prev => prev.map(p => p.id === id ? { ...p, birthday: val, updatedAt: Date.now() } : p));
@@ -1036,8 +1145,65 @@ function App() {
     await apiSaveHistory(newHistory);
   }
 
+  // PUSH: Uncomment enablePush to enable push:
+  // async function enablePush() {
+  // setPushLoading(true);
+  // setPushError("");
+  // try {
+  // const reg = await navigator.serviceWorker.ready;
+  // const permission = await Notification.requestPermission();
+  // if (permission === "denied") {
+  // setPushError("Notifications blocked. Go to Settings → Safari → [this site] → Allow Notifications.");
+  // setPushLoading(false);
+  // return;
+  // }
+  // if (permission !== "granted") {
+  // setPushError("Permission not granted. Please try again.");
+  // setPushLoading(false);
+  // return;
+  // }
+  // const sub = await reg.pushManager.subscribe({
+  // userVisibleOnly: true,
+  // applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
+  // });
+  // const hash = btoa(sub.endpoint).slice(0, 40);
+  // await apiRegisterPush(sub.toJSON(), pushTime);
+  // localStorage.setItem("intercede-push-time", pushTime);
+  // localStorage.setItem("intercede-push-hash", hash);
+  // setPushEnabled(true);
+  // setReminderExpanded(false);
+  // try { localStorage.setItem('intercede-reminder-expanded', 'false'); } catch (_e) {}
+  // } catch (e) {
+  // setPushError("Error: " + (e.message || "Could not enable notifications."));
+  // }
+  // setPushLoading(false);
+  // }
+  //
 
+  // PUSH: Uncomment updatePushTime to enable push:
+  // async function updatePushTime(time) {
+  // setPushTime(time);
+  // localStorage.setItem("intercede-push-time", time);
+  // if (pushEnabled) {
+  // try {
+  // const reg = await navigator.serviceWorker.ready;
+  // const sub = await reg.pushManager.getSubscription();
+  // if (sub) await apiRegisterPush(sub.toJSON(), time);
+  // } catch (_e) {}
+  // }
+  // }
+  //
 
+  // PUSH: Uncomment disablePush to enable push:
+  // async function disablePush() {
+  // try {
+  // const reg = await navigator.serviceWorker.ready;
+  // const sub = await reg.pushManager.getSubscription();
+  // if (sub) await sub.unsubscribe();
+  // setPushEnabled(false);
+  // } catch (_e) {}
+  // }
+  //
 
   function submitAdminPw() {
     if (adminPwInput === ADMIN_PASSWORD) {
@@ -1066,8 +1232,8 @@ function App() {
         <div style={S.logoWrap}>
           <svg width="16" height="16" viewBox="0 0 20 20" style={{ flexShrink:0, marginTop:2 }}><path d="M10,2 L11.768,8.232 L18,10 L11.768,11.768 L10,18 L8.232,11.768 L2,10 L8.232,8.232 Z" fill="#6b9e78" /></svg>
           <div style={{ display:"flex", flexDirection:"column", lineHeight:1 }}>
-            <span style={S.logoText}>{MINISTRY_NAME}</span>
-            {MINISTRY_SUB && <span style={S.logoSub}>{MINISTRY_SUB}</span>}
+            <span style={S.logoText}>Let’s Pray</span>
+            <span style={S.logoSub}>Calvary Students</span>
           </div>
         </div>
         <div style={{ ...S.weekBar, cursor: "pointer" }} onClick={() => setView("week")}>
@@ -1226,48 +1392,50 @@ function App() {
                         )}
                       </div>
 
-                      {/* Photo — taped to bottom-right corner, absolutely positioned */}
-                      {current?.photoUrl && (
-                        <div style={{
-                          position: "absolute",
-                          top: 20,
-                          right: 20,
-                          zIndex: 3,
-                          display: "inline-block",
-                        }}>
-                          {/* Tape strip */}
-                          <div style={{
-                            position: "absolute",
-                            top: -7,
-                            left: "50%",
-                            transform: "translateX(-50%)",
-                            width: 42,
-                            height: 12,
-                            background: "rgba(255,255,255,0.55)",
-                            borderRadius: 2,
-                            zIndex: 2,
-                            boxShadow: "0 1px 3px rgba(0,0,0,0.15)",
-                          }} />
-                          <img
-                            src={current.photoUrl}
-                            alt={current.name}
-                            onClick={() => { setLightboxUrl(current.photoUrl); setLightboxName(current.name); }}
-                            style={{
-                              width: 88,
-                              height: 66,
-                              objectFit: "cover",
-                              display: "block",
-                              borderRadius: 2,
-                              transform: `rotate(${photoRotation(current.id)}deg)`,
-                              boxShadow: "0 3px 12px rgba(0,0,0,0.5), 0 1px 3px rgba(0,0,0,0.3)",
-                              border: "3px solid #f0ebe4",
-                              position: "relative",
-                              zIndex: 1,
-                              cursor: "pointer",
-                            }}
-                          />
-                        </div>
-                      )}
+                      {/* PHOTO: Add photo-on-card block here — see Appendix B */}
+                      // {current?.photoUrl && (
+                      // <div style={{
+                      // position: "absolute",
+                      // top: 20,
+                      // right: 20,
+                      // zIndex: 3,
+                      // display: "inline-block",
+                      // }}>
+                      // {/* Tape strip */}
+                      // <div style={{
+                      // position: "absolute",
+                      // top: -7,
+                      // left: "50%",
+                      // transform: "translateX(-50%)",
+                      // width: 42,
+                      // height: 12,
+                      // background: "rgba(255,255,255,0.55)",
+                      // borderRadius: 2,
+                      // zIndex: 2,
+                      // boxShadow: "0 1px 3px rgba(0,0,0,0.15)",
+                      // }} />
+                      // <img
+                      // src={current.photoUrl}
+                      // alt={current.name}
+                      // onClick={() => { setLightboxUrl(current.photoUrl); setLightboxName(current.name); }}
+                      // style={{
+                      // width: 88,
+                      // height: 66,
+                      // objectFit: "cover",
+                      // display: "block",
+                      // borderRadius: 2,
+                      // transform: `rotate(${photoRotation(current.id)}deg)`,
+                      // boxShadow: "0 3px 12px rgba(0,0,0,0.5), 0 1px 3px rgba(0,0,0,0.3)",
+                      // border: "3px solid #f0ebe4",
+                      // position: "relative",
+                      // zIndex: 1,
+                      // cursor: "pointer",
+                      // }}
+                      // />
+                      // </div>
+                      // )}
+                      //
+                      */}
 
                       {/* Name — primary */}
                       <h2 style={S.cardName}>{current?.name}</h2>
@@ -1554,508 +1722,4 @@ function App() {
                       </div>
                     ) : (
                       <div style={S.nameRow}>
-                        <span style={S.personName}>{p.name}</span>
-                        <button onClick={() => { setEditNameFor(p.id); setNameInput(p.name); setEditBdayFor(null); }} style={S.editNameBtn} title="Edit name">✎</button>
-                      </div>
-                    )}
-                    <div style={S.personMeta}>
-                      <span style={{ ...S.badgeSm, ...(p.type === "leader" ? S.leaderBadgeSm : S.studentBadgeSm) }}>{p.type}</span>
-                      {p.group && <span style={{ ...S.badgeSm, ...(p.group === "hs" ? S.hsBadgeSm : S.msBadgeSm) }}>{p.group.toUpperCase()}</span>}
-                      {p.type === "student" && p.grade && <span style={S.gradeBadge}>{ordinal(p.grade)} Gr</span>}
-                      {withinWeek(p.prayedAt) && <span style={S.prayedSmall}>✓ prayed</span>}
-                      {(p.prayerRequests || []).length > 0 && <span style={S.reqCountBadge}>{p.prayerRequests.length} req</span>}
-                      {p.birthday && <span style={S.bdayBadgeSm}><Cake size={9} style={{ marginRight: 3 }} />{formatBirthday(p.birthday)}</span>}
-                    </div>
-                  </div>
-                  <div style={S.personActions}>
-                    <button onClick={() => { setEditBdayFor(editBdayFor === p.id ? null : p.id); setBdayInput(p.birthday || ""); setEditNameFor(null); }}
-                      style={{ ...S.iconBtn, color: p.birthday ? C.accent : C.muted }} title="Set birthday"><Cake size={13} /></button>
-                    <button onClick={() => cycleGroup(p.id)} style={{ ...S.iconBtn, color: p.group === "hs" ? "#7aafc4" : p.group === "ms" ? "#8eba95" : C.muted }} title="Cycle HS/MS/none">
-                      <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.02em" }}>{p.group ? p.group.toUpperCase() : "—"}</span>
-                    </button>
-                    <button onClick={() => toggleType(p.id)} style={S.iconBtn} title="Toggle role"><RefreshCw size={13} /></button>
-                    <button onClick={() => deactivate(p.id)} style={{ ...S.iconBtn, color: C.muted }} title="Make inactive"><Trash2 size={13} /></button>
-                  </div>
-                </div>
-                {editBdayFor === p.id && (
-                  <div style={S.bdayEditRow}>
-                    <Cake size={13} style={{ color: C.accent, flexShrink: 0 }} />
-                    <input autoFocus value={bdayInput} onChange={e => setBdayInput(e.target.value)}
-                      onKeyDown={e => { if (e.key === "Enter") saveBirthday(p.id, parseBirthdayStr(bdayInput)); if (e.key === "Escape") setEditBdayFor(null); }}
-                      placeholder="MM-DD  e.g. 03-15" style={S.bdayInput} />
-                    <button onClick={() => saveBirthday(p.id, parseBirthdayStr(bdayInput))} style={S.reqAddBtn}>Save</button>
-                    {p.birthday && <button onClick={() => saveBirthday(p.id, "")} style={S.reqCancelBtn} title="Clear"><X size={12} /></button>}
-                  </div>
-                )}
-                {p.type === "student" && (
-                  <div style={S.gradeRow}>
-                    <span style={S.gradeLabel}>Grade</span>
-                    <select value={p.grade || ""} onChange={e => setPeople(prev => prev.map(q => q.id === p.id ? { ...q, grade: e.target.value ? Number(e.target.value) : null, updatedAt: Date.now() } : q))}
-                      style={S.gradeSelect}>
-                      <option value="">—</option>
-                      {[5,6,7,8,9,10,11,12].map(g => <option key={g} value={g}>{`Grade ${g}`}</option>)}
-                    </select>
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-
-          {/* End-of-year grade promotion */}
-          <div style={S.promoteSection}>
-            {!confirmPromo ? (
-              <button onClick={() => setConfirmPromo(true)} style={S.promoteBtn}>
-                🎓 End of Year — Promote All Grades
-              </button>
-            ) : (
-              <div style={S.promoteConfirm}>
-                <p style={S.promoteConfirmText}>Move every student up one grade? 12th graders will be made inactive.</p>
-                <div style={{ display: "flex", gap: 8 }}>
-                  <button onClick={promoteGrades} style={S.confirmBtn}>Yes, Promote</button>
-                  <button onClick={() => setConfirmPromo(false)} style={S.cancelBtn}>Cancel</button>
-                </div>
-              </div>
-            )}
-          </div>
-
-          {people.filter(p => p.active === false).length > 0 && (
-            <div style={S.inactiveSection}>
-              <p style={S.inactiveHeading}>Inactive</p>
-              {people.filter(p => p.active === false).map(p => (
-                <div key={p.id} style={S.inactiveRow}>
-                  <span style={S.inactiveName}>{p.name}</span>
-                  <div style={{ display: "flex", gap: 6 }}>
-                    <button onClick={() => restore(p.id)} style={S.restoreBtn}>Restore</button>
-                    <button onClick={() => deletePerm(p.id)} style={S.deleteBtn}>Delete</button>
-                  </div>
-                </div>
-              ))}
-            <div style={{ display:"flex", justifyContent:"flex-end", marginTop:8 }}>
-              {!confirmClearInactive ? (
-                <button onClick={() => setConfirmClearInactive(true)} style={{ background:"none", border:"none", color:"#8a5050", fontSize:12, cursor:"pointer", fontFamily:"'Inter', system-ui, sans-serif" }}>
-                  Clear all inactive…
-                </button>
-              ) : (
-                <div style={{ display:"flex", alignItems:"center", gap:8 }}>
-                  <span style={{ fontSize:12, color:C.muted }}>Remove all inactive?</span>
-                  <button onClick={clearAllInactive} style={{ background:"#8a5050", border:"none", color:"#fff", borderRadius:6, padding:"5px 12px", fontSize:12, cursor:"pointer", fontFamily:"'Inter', system-ui, sans-serif" }}>Yes, clear</button>
-                  <button onClick={() => setConfirmClearInactive(false)} style={S.cancelBtn}>Cancel</button>
-                </div>
-              )}
-            </div>
-            </div>
-          )}
-        </div>
-      )}
-
-
-      {/* ─── ROSTER ─── */}
-      {view === "roster" && (
-        <div style={S.importWrap}>
-          {/* Group filter */}
-          <div style={{ display:"flex", gap:0, marginBottom:12, borderRadius:10, overflow:"hidden", border:`1px solid ${C.border}` }}>
-            {[["all","All"],["ms","MS"],["hs","HS"],["leader","Leaders"]].map(([val, label]) => (
-              <button key={val} onClick={() => setRosterGroup(val)} style={{ flex:1, background: rosterGroup === val ? C.accent : C.surface, border:"none", color: rosterGroup === val ? "#fff" : C.muted, padding:"9px 0", fontSize:13, fontWeight: rosterGroup === val ? 600 : 400, cursor:"pointer", fontFamily:"'Inter', system-ui, sans-serif", transition:"background 0.15s" }}>
-                {label}
-              </button>
-            ))}
-          </div>
-
-          {/* Sort filter */}
-          <div style={{ display:"flex", gap:16, marginBottom:12, justifyContent:"center" }}>
-            {[["name","A–Z"],["grade","Grade"],["birthday","Birthday"]].map(([val, label]) => (
-              <button key={val} onClick={() => setRosterSort(val)} style={{ background:"none", border:"none", borderBottom: rosterSort === val ? `2px solid ${C.accent}` : "2px solid transparent", color: rosterSort === val ? C.cream : C.muted, fontSize:13, fontWeight: rosterSort === val ? 500 : 400, padding:"2px 0", cursor:"pointer", fontFamily:"'Inter', system-ui, sans-serif" }}>
-                {label}
-              </button>
-            ))}
-          </div>
-
-          {/* People list */}
-          <div style={{ display:"flex", flexDirection:"column", gap:1 }}>
-            {activePeople
-              .filter(p => rosterGroup === "all" ? true : rosterGroup === "leader" ? p.type === "leader" : p.group === rosterGroup && p.type === "student")
-              .slice().sort((a, b) => {
-                if (rosterSort === "grade") {
-                  const ga = Number(a.grade) || 99;
-                  const gb = Number(b.grade) || 99;
-                  return ga !== gb ? ga - gb : a.name.localeCompare(b.name);
-                }
-                if (rosterSort === "birthday") {
-                  // Sort by days until next birthday (soonest first, just-passed at end)
-                  const daysUntil = (bday) => {
-                    if (!bday) return 9999;
-                    const [m, d] = bday.split("-").map(Number);
-                    const now = new Date(new Date().toLocaleString("en-US", { timeZone: "America/New_York" }));
-                    const thisYear = new Date(now.getFullYear(), m - 1, d);
-                    let diff = Math.ceil((thisYear - now) / 86400000);
-                    if (diff < 0) diff += 365; // already passed this year — push to end
-                    return diff;
-                  };
-                  const da = daysUntil(a.birthday);
-                  const db = daysUntil(b.birthday);
-                  return da !== db ? da - db : a.name.localeCompare(b.name);
-                }
-                return a.name.localeCompare(b.name);
-              })
-              .map(p => {
-                const bdayFmt = p.birthday ? (() => { const [m, d] = p.birthday.split("-"); const date = new Date(2000, parseInt(m)-1, parseInt(d)); return date.toLocaleDateString("en-US", { month:"short", day:"numeric" }); })() : null;
-                return (
-                  <div key={p.id} style={{ display:"flex", alignItems:"center", padding:"11px 14px", background:C.surface, borderRadius:8, gap:12 }}>
-                    {/* Photo */}
-
-                    {/* Text — left aligned below name */}
-                    <div style={{ display:"flex", flexDirection:"column", gap:3, flex:1, minWidth:0 }}>
-                      <span style={{ fontSize:15, color:C.cream, fontFamily:"'Lora', Georgia, serif" }}>{p.name}</span>
-                      <div style={{ display:"flex", gap:8, alignItems:"center", flexWrap:"wrap" }}>
-                        {p.type === "student" && p.grade && (
-                          <span style={{ fontSize:13, color:C.muted, fontWeight:600 }}>{ordinal(p.grade)} Grade</span>
-                        )}
-                        {p.type === "leader" && p.group && (
-                          <span style={{ fontSize:13, color:C.muted, fontWeight:600 }}>{p.group.toUpperCase()}</span>
-                        )}
-                        {bdayFmt && <span style={{ fontSize:13, color:C.muted, display:"flex", alignItems:"center", gap:3 }}><Cake size={12} />{bdayFmt}</span>}
-                      </div>
-                    </div>
-                    {/* Group badge */}
-                    {p.group && <span style={{ fontSize:10, fontWeight:600, color: p.group === "hs" ? "#7aafc4" : C.accent, background: p.group === "hs" ? C.studentBg : C.accentBg, borderRadius:6, padding:"2px 7px", flexShrink:0 }}>{p.group.toUpperCase()}</span>}
-                  </div>
-                );
-              })
-            }
-            {activePeople.filter(p => rosterGroup === "all" ? true : rosterGroup === "leader" ? p.type === "leader" : p.group === rosterGroup && p.type === "student").length === 0 && (
-              <p style={{ textAlign:"center", color:C.muted, fontSize:13, padding:"32px 0" }}>No one in this group yet.</p>
-            )}
-          </div>
-        </div>
-      )}
-
-
-      {/* ─── REPORT ─── */}
-      {view === "report" && (
-        <div style={S.importWrap}>
-          <div style={S.reportBox}>
-            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:12 }}>
-              <div style={{ display:"flex", alignItems:"center", gap:8 }}><BarChart2 size={16} color={C.accent} /><p style={{ ...S.reportTitle, margin:0 }}>Weekly Prayer Report</p></div>
-              <div style={{ display:"flex", gap:12 }}>
-                <button onClick={recalculateHistory} style={{ background:"none", border:"none", color:C.muted, fontSize:11, cursor:"pointer", fontFamily:"'Inter', system-ui, sans-serif" }}>
-                  recalculate
-                </button>
-                {weekHistory.length > 0 && (
-                  <button onClick={async () => { setWeekHistory([]); await apiSaveHistory([]); }} style={{ background:"none", border:"none", color:C.muted, fontSize:11, cursor:"pointer", fontFamily:"'Inter', system-ui, sans-serif" }}>
-                    clear
-                  </button>
-                )}
-              </div>
-            </div>
-            {weekHistory.length === 0 ? (
-              <p style={S.reportEmpty}>Data will appear here after the first Monday reset.</p>
-            ) : weekHistory.map((w, i) => {
-              const pct = w.total > 0 ? Math.round((w.count / w.total) * 100) : 0;
-              const weekEndTs = w.weekStart - 1;
-              const label = i === 0
-                ? `${getWeekLabel(w.prevWeekStart)} – ${getWeekLabel(weekEndTs)} (last week)`
-                : `${getWeekLabel(w.prevWeekStart)} – ${getWeekLabel(weekEndTs)}`;
-              return (
-                <div key={w.weekStart} style={S.reportRow}>
-                  <div style={S.reportRowTop}>
-                    <span style={S.reportWeekLabel}>{label}</span>
-                    <span style={S.reportCount}>{w.count} / {w.total}</span>
-                  </div>
-                  <div style={S.reportBar}>
-                    <div style={{ ...S.reportBarFill, width: `${pct}%` }} />
-                  </div>
-                  <span style={S.reportPct}>{pct}% prayed for</span>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
-
-      {/* ─── IMPORT ─── */}
-      {view === "import" && (
-        <div style={S.importWrap}>
-          {/* Export */}
-          <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"14px 16px", background:C.surface, border:`1px solid ${C.border}`, borderRadius:12 }}>
-            <div>
-              <p style={{ margin:0, fontSize:14, color:C.cream, fontWeight:500 }}>Export Roster</p>
-              <p style={{ margin:"2px 0 0", fontSize:12, color:C.muted }}>Download all active people as a CSV</p>
-            </div>
-            <button onClick={exportRoster} style={{ background:C.accent, border:"none", color:"#fff", borderRadius:9, padding:"9px 16px", fontSize:13, fontWeight:600, cursor:"pointer", fontFamily:"'Inter', system-ui, sans-serif", display:"flex", alignItems:"center", gap:6, flexShrink:0 }}>
-              <Upload size={14} />Export
-            </button>
-          </div>
-
-          <h3 style={S.importTitle}>Import CSV</h3>
-          <p style={S.importDesc}>
-            Just export whatever roster you already have. The importer only looks for name and birthday columns — everything else is ignored.
-          </p>
-
-          <div style={S.importRulesBox}>
-            <div style={S.importRule}>
-              <span style={{ ...S.importRuleIcon, fontFamily:"monospace", fontSize:13 }}>ID</span>
-              <div>
-                <strong style={{ color: C.cream }}>Names</strong> — recognizes columns like <code style={S.code}>Name</code>, <code style={S.code}>First Name</code>, <code style={S.code}>Last Name</code>, <code style={S.code}>Student</code>. Separate first/last columns are joined automatically. "Smith, John" format is flipped to "John Smith".
-              </div>
-            </div>
-            <div style={S.importRule}>
-              <Cake size={16} color={C.muted} style={{ flexShrink:0, marginTop:2 }} />
-              <div>
-                <strong style={{ color: C.cream }}>Birthdays</strong> — recognizes <code style={S.code}>Birthday</code>, <code style={S.code}>DOB</code>, <code style={S.code}>Birthdate</code>. Accepts MM/DD, MM-DD, or "March 15".
-              </div>
-            </div>
-            <div style={S.importRule}>
-              <span style={{ ...S.importRuleIcon, fontFamily:"monospace", fontSize:13 }}>ST</span>
-              <div>All imported people start as <strong style={{ color: C.cream }}>Students</strong>. Change roles in the People tab after importing.</div>
-            </div>
-          </div>
-
-          <pre style={S.csvPreview}>{`Last Name,First Name,Grade,Email,DOB\nSmith,John,10,j@school.edu,03/15\nLee,Sarah,11,s@school.edu,11-02\nBrown,Mike,9,,`}</pre>
-          <p style={S.importNote}>Above: a messy real-world export — Grade and Email columns are simply ignored.</p>
-
-          <button onClick={() => fileRef.current.click()} style={S.uploadBtn}>
-            <Upload size={16} style={{ marginRight: 8 }} /> Choose File
-          </button>
-          <input ref={fileRef} type="file" accept=".csv,.txt" onChange={handleFile} style={{ display: "none" }} />
-
-          {importData && (
-            <div style={S.previewBox}>
-              <p style={S.previewTitle}>Preview — {importData.length} people found</p>
-              <div style={S.previewScroll}>
-                {importData.slice(0, 12).map((p, i) => (
-                  <div key={i} style={S.previewRow}>
-                    <span style={S.previewName}>{p.name}</span>
-                    {p.birthday
-                      ? <span style={S.bdayBadgeSm}><Cake size={9} style={{ marginRight: 3 }} />{formatBirthday(p.birthday)}</span>
-                      : <span style={{ fontSize: 11, color: C.faint }}>no birthday</span>
-                    }
-                  </div>
-                ))}
-                {importData.length > 12 && <p style={S.moreText}>and {importData.length - 12} more</p>}
-              </div>
-              <div style={S.previewBtnRow}>
-                <button onClick={confirmImport} style={S.confirmBtn}>Import All</button>
-                <button onClick={() => setImportData(null)} style={S.cancelBtn}>Cancel</button>
-              </div>
-            </div>
-          )}
-
-
-        </div>
-      )}
-      {/* Admin footer link */}
-      <div style={S.adminFooter}>
-        {adminAuthed
-          ? <button onClick={() => { setAdminAuthedState(false); localStorage.removeItem(ADMIN_KEY); setView("pray"); }} style={S.adminLink}>lock admin</button>
-          : <button onClick={() => { setAdminPwInput(""); setAdminPwError(""); setShowAdminPrompt(true); }} style={S.adminLink}>admin</button>
-        }
-      </div>
-    </div>
-  );
-}
-
-/* ── Colors ─────────────────────────────────────────────── */
-const C = {
-  bg: "#1a1c1e",        // deep charcoal
-  surface: "#222527",   // slightly lighter charcoal
-  card: "#272b2e",      // card surface
-  border: "#333839",    // subtle border
-  accent: "#6b9e78",    // sage green
-  accentLight: "#8eba95", // lighter sage
-  accentBg: "#1e2820",  // sage tinted bg
-  cream: "#e8e0d4",     // warm white
-  muted: "#7a8082",     // cool grey
-  faint: "#2e3235",     // very dark grey
-  student: "#5b8fa8",   // steel blue
-  studentBg: "#1a262e", // dark blue
-  leader: "#6b9e78",    // sage (same as accent)
-  leaderBg: "#1e2820",
-  prayedGreen: "#6b9e78",
-  prayedBg: "#1e2820",
-};
-
-/* ── Styles ─────────────────────────────────────────────── */
-const S = {
-  root: { minHeight: "100vh", background: C.bg, color: C.cream, fontFamily: "'Inter', system-ui, sans-serif", fontSize: 14, maxWidth: 480, margin: "0 auto", display: "flex", flexDirection: "column" },
-  header: { display: "flex", alignItems: "center", justifyContent: "space-between", padding: "20px 20px 0" },
-  logoWrap: { display: "flex", alignItems: "center", gap: 8 },
-  logoCross: { fontSize: 18, color: C.accent },
-  logoText: { fontFamily: "'Lora', Georgia, serif", fontSize: 24, fontWeight: 600, color: C.cream, letterSpacing: "0.01em" },
-  weekBar: { display: "flex", alignItems: "center", gap: 6, background: C.surface, border: `1px solid ${C.border}`, borderRadius: 20, padding: "5px 12px" },
-  weekText: { fontSize: 12, color: C.muted },
-  bdayAlert: { fontSize: 11, background: C.faint, color: C.accent, borderRadius: 10, padding: "2px 7px 2px 6px", display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 3, verticalAlign: "middle" },
-  progressTrack: { margin: "14px 20px 0", height: 3, background: C.faint, borderRadius: 2, overflow: "hidden" },
-  progressFill: { height: "100%", background: C.accent, borderRadius: 2, transition: "width 0.6s ease" },
-  tabs: { display: "flex", borderBottom: `1px solid ${C.border}`, margin: "14px 0 0" },
-  tab: { flex: 1, background: "none", border: "none", color: C.muted, padding: "10px 0", cursor: "pointer", fontFamily: "'Inter', system-ui, sans-serif", fontSize: 13, fontWeight: 400, letterSpacing: "0.04em", transition: "color 0.2s" },
-  tabActive: { color: C.cream, borderBottom: `2px solid ${C.accent}`, marginBottom: -1, fontWeight: 600 },
-  // PRAY
-  prayWrap: { flex: 1, display: "flex", flexDirection: "column", padding: "16px 20px 28px" },
-  controls: { display: "flex", alignItems: "center", gap: 8, marginBottom: 10 },
-  togglePill: { display: "flex", background: C.faint, borderRadius: 20, padding: 2 },
-  toggleOpt: { background: "none", border: "none", color: C.muted, padding: "5px 14px", borderRadius: 18, cursor: "pointer", fontSize: 12, fontFamily: "'Inter', system-ui, sans-serif", transition: "all 0.2s" },
-  toggleOptOn: { background: C.surface, color: C.cream, fontWeight: 500 },
-  filterSelect: { background: C.faint, border: `1px solid ${C.border}`, color: C.muted, borderRadius: 20, padding: "5px 12px", fontSize: 12, fontFamily: "'Inter', system-ui, sans-serif", cursor: "pointer", outline: "none", flex: 1 },
-  reshuffleBtn: { background: "none", border: `1px solid ${C.border}`, color: C.muted, borderRadius: 20, width: 32, height: 32, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0 },
-  bdayDismiss: { position:"absolute", right:8, top:"50%", transform:"translateY(-50%)", background:"none", border:"none", color:C.border, cursor:"pointer", fontSize:14, padding:"4px 6px", lineHeight:1 },
-  bdayBanner: { background: C.faint, border: `1px solid ${C.accent}`, borderRadius: 12, color: C.accentLight, padding: "12px 16px", fontSize: 13, fontWeight: 500, cursor: "pointer", fontFamily: "'Inter', system-ui, sans-serif", textAlign: "center", width: "100%", marginBottom: 8, animation: "bdayGlow 1.6s ease-in-out infinite" },
-  swipeHint: { fontSize: 11, color: C.faint, textAlign: "center", marginBottom: 8, letterSpacing: "0.05em" },
-  empty: { flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 10, paddingBottom: 60 },
-  emptyTitle: { fontFamily: "'Lora', Georgia, serif", fontSize: 22, color: C.muted, margin: 0 },
-  emptySub: { fontSize: 13, color: C.faint, margin: 0, textAlign: "center" },
-  cardOuter: { position: "relative", margin: "0 0 20px", touchAction: "pan-y" },
-  cardGhost: { position: "absolute", inset: 0, background: "#242729", borderRadius: 16, boxShadow: "0 4px 16px rgba(0,0,0,0.4)" },
-  card: { position: "relative", backgroundColor: C.card, background: `repeating-linear-gradient(${C.card}, ${C.card} 27px, #2e3235 27px, #2e3235 28px)`, backgroundPositionY: "52px", border: "1px solid rgba(255,255,255,0.06)", borderTop: `1px solid ${C.accent}33`, borderRadius: 16, padding: "28px 24px 22px", display: "flex", flexDirection: "column", gap: 0, boxShadow: `0 2px 0 ${C.accent}18 inset, 0 12px 48px rgba(0,0,0,0.6), 0 2px 8px rgba(0,0,0,0.4)`, userSelect: "none", willChange: "transform" },
-  cardDone: { background: "#1d2620", border: "1px solid rgba(107,158,120,0.2)", borderTop: "1px solid rgba(107,158,120,0.35)" },
-  badge: { display: "inline-flex", alignSelf: "flex-start", padding: "3px 11px", borderRadius: 12, fontSize: 11, fontWeight: 500, letterSpacing: "0.06em", textTransform: "uppercase", marginBottom: 14 },
-  studentBadge: { background: C.studentBg, color: C.student, border: `1px solid ${C.student}33` },
-  leaderBadge: { background: C.leaderBg, color: C.leader, border: `1px solid ${C.leader}33` },
-  cardName: { fontFamily: "'Lora', Georgia, serif", fontSize: 34, fontWeight: 500, lineHeight: 1.2, color: C.cream, margin: "6px 0 12px", letterSpacing: "-0.01em" },
-  bdayChip: { display: "inline-flex", alignItems: "center", background: C.faint, border: `1px solid ${C.border}`, color: C.accent, borderRadius: 10, padding: "5px 12px", fontSize: 14, marginBottom: 12, gap: 4 },
-  bdayChipUrgent: { background: C.accentBg, border: `1px solid ${C.accent}`, color: C.accentLight, fontWeight: 500 },
-  bdayQuiet: { display: "flex", alignItems: "center", gap: 4, fontSize: 13, color: C.muted, marginBottom: 10 },
-  cardPrayedRow: { marginBottom: 18, marginTop: 4 },
-  prayedChip: { fontSize: 12, color: C.prayedGreen, background: C.accentBg, padding: "3px 10px", borderRadius: 10 },
-  lastPrayedChip: { fontSize: 13, color: C.muted, lineHeight: 1.4 },
-  neverChip: { fontSize: 13, color: C.muted, fontStyle: "italic" },
-  reqBox: { background: C.faint, borderRadius: 10, padding: "12px 14px", marginBottom: 14 },
-  reqLabel: { fontSize: 10, color: C.muted, textTransform: "uppercase", letterSpacing: "0.1em", margin: "0 0 8px" },
-  reqItem: { display: "flex", alignItems: "flex-start", gap: 8, marginBottom: 6 },
-  reqDot: { color: C.accent, fontSize: 8, marginTop: 3, flexShrink: 0 },
-  reqText: { flex: 1, fontSize: 13, color: C.cream, lineHeight: 1.4 },
-  reqRemove: { background: "none", border: "none", color: C.muted, cursor: "pointer", padding: 2, display: "flex", flexShrink: 0 },
-  reqInputRow: { display: "flex", gap: 6, alignItems: "center", marginTop: 4 },
-  reqInput: { flex: 1, background: C.faint, border: `1px solid ${C.border}`, borderRadius: 8, color: C.cream, padding: "7px 10px", fontSize: 13, fontFamily: "'Inter', system-ui, sans-serif", outline: "none" },
-  reqAddBtn: { background: C.accent, border: "none", color: "#fff", borderRadius: 8, padding: "7px 12px", fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "'Inter', system-ui, sans-serif" },
-  reqCancelBtn: { background: "none", border: `1px solid ${C.border}`, color: C.muted, borderRadius: 8, width: 32, height: 32, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" },
-  addReqTrigger: { background: "none", border: `1px solid ${C.border}`, color: C.muted, borderRadius: 8, padding: "6px 12px", fontSize: 12, cursor: "pointer", display: "flex", alignItems: "center", alignSelf: "flex-start", marginTop: 8, fontFamily: "'Inter', system-ui, sans-serif" },
-  navRow: { display: "flex", alignItems: "center", justifyContent: "center", gap: 20, marginBottom: 16 },
-  navArrow: { background: C.surface, border: `1px solid ${C.border}`, color: C.muted, borderRadius: "50%", width: 44, height: 44, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" },
-  counter: { fontFamily: "'Lora', Georgia, serif", fontSize: 18, color: C.muted, minWidth: 60, textAlign: "center" },
-  prayBtn: { background: C.accent, border: "none", color: "#fff", borderRadius: 12, padding: "14px 0", fontSize: 15, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'Inter', system-ui, sans-serif", boxShadow: `0 4px 24px rgba(107,158,120,0.4)`, letterSpacing: "0.02em" },
-  prayedActions: { display: "flex", alignItems: "center", justifyContent: "center", gap: 12 },
-  prayedConfirm: { display: "flex", alignItems: "center", color: C.prayedGreen, fontSize: 15, fontWeight: 500 },
-  undoBtn: { background: "none", border: `1px solid ${C.border}`, color: C.muted, borderRadius: 8, padding: "6px 14px", fontSize: 12, cursor: "pointer", fontFamily: "'Inter', system-ui, sans-serif" },
-  // WEEK
-  weekWrap: { flex: 1, padding: "16px 20px 32px", display: "flex", flexDirection: "column", gap: 14, overflowY: "auto" },
-  weekTitle: { fontFamily: "'Lora', Georgia, serif", fontSize: 28, color: C.cream, margin: 0, fontWeight: 400 },
-  weekSection: { background: C.surface, border: `1px solid ${C.border}`, borderRadius: 14, overflow: "hidden" },
-  sectionHead: { display: "flex", alignItems: "center", padding: "11px 14px", borderBottom: `1px solid ${C.border}`, background: C.bg },
-  sectionTitle: { fontSize: 11, color: C.muted, textTransform: "uppercase", letterSpacing: "0.09em", fontWeight: 500 },
-  weekRow: { display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 14px", borderBottom: `1px solid ${C.faint}` },
-  weekName: { fontSize: 14, color: C.cream },
-  weekMeta: { fontSize: 11, color: C.muted, marginTop: 2 },
-  weekEmpty: { fontSize: 13, color: C.faint, padding: "16px 14px", margin: 0, textAlign: "center", fontStyle: "italic" },
-  allPrayedBanner: { display: "flex", flexDirection: "column", alignItems: "center", gap: 8, padding: "22px 14px" },
-  allPrayedText: { fontFamily: "'Lora', Georgia, serif", fontSize: 18, color: C.accent, textAlign: "center" },
-  // PEOPLE
-  peopleWrap: { flex: 1, padding: "16px 20px 28px", display: "flex", flexDirection: "column", gap: 10 },
-  addRow: { display: "flex", gap: 8 },
-  addInput: { flex: 1, background: C.surface, border: `1px solid ${C.border}`, borderRadius: 10, color: C.cream, padding: "10px 12px", fontSize: 13, fontFamily: "'Inter', system-ui, sans-serif", outline: "none" },
-  addTypeSelect: { background: C.surface, border: `1px solid ${C.border}`, color: C.muted, borderRadius: 10, padding: "10px 10px", fontSize: 12, fontFamily: "'Inter', system-ui, sans-serif", cursor: "pointer", outline: "none" },
-  addPersonBtn: { background: C.accent, border: "none", color: "#fff", borderRadius: 10, width: 42, height: 42, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0 },
-  statRow: { display: "flex", gap: 6 },
-  statChip: { flex: 1, background: C.surface, border: `1px solid ${C.border}`, borderRadius: 10, padding: "8px 0", display: "flex", flexDirection: "column", alignItems: "center", gap: 2 },
-  statNum: { fontSize: 18, fontFamily: "'Lora', Georgia, serif", color: C.cream },
-  statLbl: { fontSize: 10, color: C.muted, textTransform: "uppercase", letterSpacing: "0.06em" },
-  personList: { display: "flex", flexDirection: "column", gap: 4 },
-  personCard: { background: C.surface, border: `1px solid ${C.border}`, borderRadius: 10, overflow: "hidden" },
-  personRow: { display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 12px" },
-  personLeft: { display: "flex", flexDirection: "column", gap: 4 },
-  personName: { fontSize: 14, color: C.cream },
-  personMeta: { display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" },
-  badgeSm: { fontSize: 10, padding: "2px 8px", borderRadius: 8, textTransform: "uppercase", letterSpacing: "0.06em", fontWeight: 500 },
-  studentBadgeSm: { background: C.studentBg, color: C.student },
-  leaderBadgeSm: { background: C.leaderBg, color: C.leader },
-  prayedSmall: { fontSize: 11, color: C.prayedGreen },
-  reqCountBadge: { fontSize: 11, color: C.accent, background: C.faint, padding: "1px 7px", borderRadius: 8 },
-  bdayBadgeSm: { display: "inline-flex", alignItems: "center", fontSize: 10, color: C.muted, background: C.faint, padding: "1px 7px", borderRadius: 8 },
-  personActions: { display: "flex", gap: 6 },
-  iconBtn: { background: "none", border: `1px solid ${C.border}`, color: C.muted, borderRadius: 8, width: 30, height: 30, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" },
-  gradeBadge: { fontSize: 10, padding: "2px 7px", borderRadius: 8, background: C.faint, color: C.muted, fontWeight: 500 },
-  gradeBadgeLg: { background: C.faint, color: C.muted, border: `1px solid ${C.border}`, marginBottom: 0 },
-  gradeRow: { display: "flex", alignItems: "center", gap: 10, padding: "7px 12px", borderTop: `1px solid ${C.faint}`, background: C.surface },
-  gradeLabel: { fontSize: 11, color: C.muted, textTransform: "uppercase", letterSpacing: "0.06em", flexShrink: 0 },
-  gradeSelect: { background: C.bg, border: `1px solid ${C.border}`, borderRadius: 7, color: C.cream, padding: "4px 8px", fontSize: 13, fontFamily: "'Inter', system-ui, sans-serif", cursor: "pointer", outline: "none" },
-  promoteSection: { marginTop: 4 },
-  promoteBtn: { background: "none", border: `1px solid ${C.border}`, color: C.muted, borderRadius: 10, padding: "11px 16px", fontSize: 13, cursor: "pointer", fontFamily: "'Inter', system-ui, sans-serif", width: "100%", textAlign: "left" },
-  promoteConfirm: { background: C.surface, border: `1px solid ${C.border}`, borderRadius: 10, padding: "14px 16px", display: "flex", flexDirection: "column", gap: 12 },
-  promoteConfirmText: { fontSize: 13, color: C.cream, margin: 0, lineHeight: 1.5 },
-  nameRow: { display: "flex", alignItems: "center", gap: 6 },
-  editNameBtn: { background: "none", border: "none", color: C.muted, cursor: "pointer", fontSize: 13, padding: "0 2px", lineHeight: 1 },
-  nameEditRow: { display: "flex", alignItems: "center", gap: 6, marginBottom: 2 },
-  nameInput: { flex: 1, background: C.bg, border: `1px solid ${C.border}`, borderRadius: 8, color: C.cream, padding: "5px 8px", fontSize: 13, fontFamily: "'Inter', system-ui, sans-serif", outline: "none", minWidth: 0 },
-  bdayEditRow: { display: "flex", alignItems: "center", gap: 8, padding: "8px 12px", borderTop: `1px solid ${C.faint}`, background: C.surface },
-  bdayInput: { flex: 1, background: C.bg, border: `1px solid ${C.border}`, borderRadius: 8, color: C.cream, padding: "6px 10px", fontSize: 13, fontFamily: "'Inter', system-ui, sans-serif", outline: "none" },
-  inactiveSection: { marginTop: 8, borderTop: `1px solid ${C.border}`, paddingTop: 12 },
-  inactiveHeading: { fontSize: 11, color: C.muted, textTransform: "uppercase", letterSpacing: "0.08em", margin: "0 0 8px" },
-  inactiveRow: { display: "flex", alignItems: "center", justifyContent: "space-between", padding: "7px 0", borderBottom: `1px solid ${C.faint}` },
-  inactiveName: { fontSize: 13, color: C.muted },
-  restoreBtn: { background: "none", border: `1px solid ${C.border}`, color: C.leader, borderRadius: 7, padding: "4px 10px", fontSize: 11, cursor: "pointer", fontFamily: "'Inter', system-ui, sans-serif" },
-  deleteBtn: { background: "none", border: `1px solid rgba(138,80,80,0.4)`, color: "#8a5050", borderRadius: 7, padding: "4px 10px", fontSize: 11, cursor: "pointer", fontFamily: "'Inter', system-ui, sans-serif" },
-  // IMPORT
-  importWrap: { flex: 1, padding: "16px 20px 28px", display: "flex", flexDirection: "column", gap: 12, overflowY: "auto" },
-  importTitle: { fontFamily: "'Lora', Georgia, serif", fontSize: 26, color: C.cream, margin: 0, fontWeight: 400 },
-  importDesc: { fontSize: 13, color: C.muted, margin: 0 },
-  importNote: { fontSize: 12, color: C.muted, margin: "0" },
-  importRulesBox: { background: C.surface, border: `1px solid ${C.border}`, borderRadius: 12, padding: "4px 0", display: "flex", flexDirection: "column" },
-  importRule: { display: "flex", gap: 12, padding: "11px 14px", borderBottom: `1px solid ${C.faint}`, fontSize: 12, color: C.muted, lineHeight: 1.5, alignItems: "flex-start" },
-  importRuleIcon: { fontSize: 16, flexShrink: 0, marginTop: 1 },
-  code: { background: C.faint, padding: "1px 6px", borderRadius: 4, fontSize: 11, color: C.accent, fontFamily: "monospace" },
-  csvPreview: { background: C.surface, border: `1px solid ${C.border}`, borderRadius: 10, padding: "12px 14px", fontSize: 12, color: C.muted, margin: 0, lineHeight: 1.6, fontFamily: "monospace", overflowX: "auto" },
-  uploadBtn: { background: C.surface, border: `1px solid ${C.border}`, color: C.cream, borderRadius: 10, padding: "12px 20px", fontSize: 13, cursor: "pointer", display: "flex", alignItems: "center", fontFamily: "'Inter', system-ui, sans-serif", alignSelf: "flex-start" },
-  previewBox: { background: C.surface, border: `1px solid ${C.border}`, borderRadius: 12, padding: "14px 16px" },
-  previewTitle: { fontSize: 12, color: C.muted, margin: "0 0 10px", textTransform: "uppercase", letterSpacing: "0.06em" },
-  previewScroll: { display: "flex", flexDirection: "column", gap: 4, maxHeight: 200, overflowY: "auto" },
-  previewRow: { display: "flex", alignItems: "center", justifyContent: "space-between", padding: "5px 0", borderBottom: `1px solid ${C.faint}` },
-  previewName: { fontSize: 13, color: C.cream },
-  moreText: { fontSize: 12, color: C.muted, margin: "6px 0 0", textAlign: "center" },
-  previewBtnRow: { display: "flex", gap: 8, marginTop: 12 },
-  confirmBtn: { background: C.accent, border: "none", color: "#fff", borderRadius: 8, padding: "9px 20px", fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "'Inter', system-ui, sans-serif" },
-  cancelBtn: { background: "none", border: `1px solid ${C.border}`, color: C.muted, borderRadius: 8, padding: "9px 16px", fontSize: 13, cursor: "pointer", fontFamily: "'Inter', system-ui, sans-serif" },
-  // WEEKLY REPORT
-  reportBox: { background: C.surface, border: `1px solid ${C.border}`, borderRadius: 14, padding: "16px" },
-  reportTitle: { fontSize: 13, color: C.accent, fontWeight: 500, margin: "0 0 12px" },
-  reportEmpty: { fontSize: 12, color: C.muted, margin: 0, fontStyle: "italic" },
-  reportRow: { display: "flex", flexDirection: "column", gap: 4, marginBottom: 14 },
-  reportRowTop: { display: "flex", justifyContent: "space-between", alignItems: "baseline" },
-  reportWeekLabel: { fontSize: 12, color: C.muted },
-  reportCount: { fontSize: 16, fontFamily: "'Lora', Georgia, serif", color: C.cream },
-  reportBar: { height: 6, background: C.faint, borderRadius: 3, overflow: "hidden" },
-  reportBarFill: { height: "100%", background: `linear-gradient(90deg, ${C.accent}, ${C.accentLight})`, borderRadius: 3, transition: "width 0.6s ease" },
-  reportPct: { fontSize: 11, color: C.muted },
-  // REMINDERS
-  reminderSection: { margin: "16px 20px 0", background: C.surface, border: `1px solid ${C.border}`, borderRadius: 14, padding: "14px 16px", display: "flex", flexDirection: "column", gap: 10 },
-  reminderSetupBtn: { background: "none", border: `1px solid ${C.border}`, color: C.muted, borderRadius: 10, padding: "10px 14px", fontSize: 13, cursor: "pointer", fontFamily: "'Inter', system-ui, sans-serif", textAlign: "left" },
-  iosDismiss: { background: "none", border: `1px solid ${C.border}`, color: C.muted, borderRadius: 8, padding: "7px 14px", fontSize: 12, cursor: "pointer", fontFamily: "'Inter', system-ui, sans-serif", alignSelf: "flex-start", marginTop: 4 },
-  timeInput: { background: C.bg, border: `1px solid ${C.border}`, borderRadius: 8, color: C.cream, padding: "6px 10px", fontSize: 13, fontFamily: "'Inter', system-ui, sans-serif", outline: "none", cursor: "pointer" },
-    reminderOffBtn: { background: "none", border: `1px solid ${C.border}`, color: "#8a5050", borderRadius: 10, padding: "9px 0", fontSize: 12, cursor: "pointer", fontFamily: "'Inter', system-ui, sans-serif" },
-  // ADMIN FOOTER
-  adminFooter: { display: "flex", justifyContent: "center", padding: "12px 0 20px", marginTop: "auto" },
-  adminLink: { background: "none", border: "none", color: C.border, fontSize: 11, cursor: "pointer", fontFamily: "'Inter', system-ui, sans-serif", letterSpacing: "0.06em" },
-  // MODAL
-  modalOverlay: { position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 100, padding: 24 },
-  modalBox: { background: C.surface, border: `1px solid ${C.border}`, borderRadius: 16, padding: "28px 24px", width: "100%", maxWidth: 320, display: "flex", flexDirection: "column", gap: 14 },
-  modalTitle: { fontFamily: "'Lora', Georgia, serif", fontSize: 22, color: C.cream, margin: 0, textAlign: "center" },
-  modalInput: { background: C.bg, border: `1px solid ${C.border}`, borderRadius: 10, color: C.cream, padding: "12px 14px", fontSize: 16, fontFamily: "'Inter', system-ui, sans-serif", outline: "none", textAlign: "center", letterSpacing: "0.08em" },
-  modalError: { fontSize: 12, color: "#c07070", margin: 0, textAlign: "center" },
-  modalBtns: { display: "flex", gap: 8 },
-  // DROPDOWN
-  ddWrap: { marginTop: 12, display: "flex", flexDirection: "column" },
-  ddToggle: { background: C.surface, border: `1px solid ${C.border}`, borderRadius: 10, color: C.muted, padding: "10px 14px", fontSize: 13, cursor: "pointer", fontFamily: "'Inter', system-ui, sans-serif", display: "flex", justifyContent: "space-between", alignItems: "center" },
-  ddList: { background: C.surface, border: `1px solid ${C.border}`, borderTop: "none", borderRadius: "0 0 10px 10px", maxHeight: 260, overflowY: "auto", display: "flex", flexDirection: "column" },
-  ddItem: { background: "none", border: "none", borderBottom: `1px solid ${C.faint}`, color: C.cream, padding: "11px 14px", fontSize: 13, cursor: "pointer", fontFamily: "'Inter', system-ui, sans-serif", display: "flex", justifyContent: "space-between", alignItems: "center", textAlign: "left" },
-  ddItemPrayed: { color: C.muted },
-  ddItemMeta: { fontSize: 11, color: C.muted, marginLeft: 8, flexShrink: 0, background: C.faint, borderRadius: 6, padding: "2px 7px" },
-  // TAP TO BEGIN
-  tapCard: { cursor: "pointer", alignItems: "center", justifyContent: "center", minHeight: 220, gap: 10, animation: "tapPulse 2s ease-in-out infinite" },
-  tapCross: { fontSize: 28, color: C.accent, marginBottom: 8 },
-  tapTitle: { fontFamily: "'Lora', Georgia, serif", fontSize: 36, fontWeight: 400, color: C.cream, margin: 0, textAlign: "center" },
-  tapSub: { fontSize: 13, color: C.muted, margin: 0, textAlign: "center" },
-  // GROUP BADGES
-  badgeRow: { display: "flex", gap: 6, marginBottom: 14 },
-  hsBadge: { background: C.studentBg, color: "#7aafc4", border: "1px solid #7aafc433", marginBottom: 0 },
-  msBadge: { background: C.faint, color: "#8eba95", border: "1px solid #6b9e7833", marginBottom: 0 },
-  hsBadgeSm: { background: C.studentBg, color: "#7aafc4" },
-  msBadgeSm: { background: C.faint, color: "#8eba95" },
-};
+{/* PHOTO: Add photo upload button here — see Appendix B */}
