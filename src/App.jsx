@@ -531,6 +531,20 @@ function LoadingScreen() {
   );
 }
 
+class ErrorBoundary extends React.Component {
+  constructor(props) { super(props); this.state = { error: null }; }
+  static getDerivedStateFromError(e) { return { error: e }; }
+  render() {
+    if (this.state.error) return (
+      <div style={{ minHeight:"100vh", background:"#1a1c1e", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", padding:32, fontFamily:"monospace" }}>
+        <p style={{ color:"#c07070", fontSize:16, marginBottom:16 }}>Error:</p>
+        <pre style={{ color:"#e8e0d4", fontSize:12, whiteSpace:"pre-wrap", maxWidth:500, background:"#222527", padding:16, borderRadius:8 }}>{this.state.error.message}</pre>
+      </div>
+    );
+    return this.props.children;
+  }
+}
+
 export default function App() {
   const [settings, setSettings] = React.useState(null); // null = loading, false = needs setup
   const [settingsLoaded, setSettingsLoaded] = React.useState(false);
@@ -578,7 +592,6 @@ export default function App() {
   const [nameInput, setNameInput] = useState("");
   const [confirmPromo, setConfirmPromo] = useState(false);
   const [confirmClearInactive, setConfirmClearInactive] = useState(false);
-  const [reminderExpanded, setReminderExpanded] = useState(() => { try { return localStorage.getItem('intercede-reminder-expanded') !== 'false'; } catch { return true; } });
   const [weekHistory, setWeekHistory] = useState([]);
   const [bdayInput, setBdayInput] = useState("");
 
