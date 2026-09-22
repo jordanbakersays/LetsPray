@@ -591,6 +591,7 @@ function AppMain({ settings }) {
   const [addType, setAddType] = useState("student");
   const [addGroup, setAddGroup] = useState("hs");
   const [addSmallGroupLeader, setAddSmallGroupLeader] = useState("");
+  const [currentLeaderId, setCurrentLeaderId] = useState(() => localStorage.getItem("letspray-current-leader") || "");
   const [search, setSearch] = useState("");
   const [editBdayFor, setEditBdayFor] = useState(null);
   const [editNameFor, setEditNameFor] = useState(null);
@@ -954,6 +955,15 @@ function AppMain({ settings }) {
   const [rosterGroup, setRosterGroup] = useState("all"); // all | ms | hs | leader
   const [rosterSort, setRosterSort] = useState("name"); // name | grade | birthday
 
+  function chooseCurrentLeader(leaderId) {
+  setCurrentLeaderId(leaderId);
+
+  if (leaderId) {
+    localStorage.setItem("letspray-current-leader", leaderId);
+  } else {
+    localStorage.removeItem("letspray-current-leader");
+  }
+}
   function addPerson() {
     if (!addName.trim()) return;
 setPeople(prev => [...prev, {
@@ -1195,6 +1205,21 @@ setPeople(prev => [...prev, {
       {/* ─── PRAY ─── */}
       {view === "pray" && (
         <div style={S.prayWrap}>
+         <div style={{ marginBottom:12 }}>
+  <select
+    value={currentLeaderId}
+    onChange={e => chooseCurrentLeader(e.target.value)}
+    style={{ ...S.filterSelect, width:"100%" }}
+  >
+    <option value="">Who are you?</option>
+    {people
+      .filter(p => p.active !== false && p.type === "leader")
+      .sort((a, b) => a.name.localeCompare(b.name))
+      .map(p => (
+        <option key={p.id} value={p.id}>{p.name}</option>
+      ))}
+  </select>
+</div>
           <div style={S.controls}>
             <div style={S.togglePill}>
               <button onClick={() => { setOrder("random"); buildDeck(); }} style={{ ...S.toggleOpt, ...(order === "random" ? S.toggleOptOn : {}) }}>Shuffle</button>
