@@ -2,13 +2,9 @@ import React, { useState, useEffect, useCallback, useRef } from "react";
 import { ChevronLeft, ChevronRight, Heart, Plus, Trash2, Upload, X, RefreshCw, BookOpen, RotateCcw, Cake, BarChart2, Bell, Star, Lightbulb } from "lucide-react";
 
 const STORAGE_KEY = "intercede-people-v2";
-const ADMIN_PASSWORD = "Promo1398!";
+// Admin password and branding set during first-run setup
+const SETUP_KEY = "letspray-setup";
 
-//   const padding = "=".repeat((4 - base64String.length % 4) % 4);
-//   const base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/");
-//   const rawData = atob(base64);
-//   return Uint8Array.from([...rawData].map(c => c.charCodeAt(0)));
-// }
 const TAP_KEY = "intercede-tap-ts";
 const TAP_TTL = 24 * 60 * 60 * 1000;
 
@@ -67,18 +63,8 @@ async function apiSave(people, force = false) {
   });
 }
 
-//     method: "POST",
-//     headers: { "Content-Type": "application/json" },
-//     body: JSON.stringify({ subscription, reminderTime }),
-//   });
-// }
-// 
-//     method: "POST",
-//     headers: { "Content-Type": "application/json" },
-//     body: JSON.stringify({ endpointHash }),
-//   });
-// }
-// 
+
+
 async function apiLoadHistory() {
   const res = await fetch("/api/history");
   if (!res.ok) return [];
@@ -100,23 +86,7 @@ function getWeekLabel(weekStartTs) {
 }
 
 // Stable per-person rotation so the card looks the same each load but varies per person
-//   return new Promise((resolve) => {
-//     const img = new Image();
-//     const url = URL.createObjectURL(file);
-//     img.onload = () => {
-//       URL.revokeObjectURL(url);
-//       const scale = Math.min(1, maxSize / Math.max(img.width, img.height));
-//       const w = Math.round(img.width * scale);
-//       const h = Math.round(img.height * scale);
-//       const canvas = document.createElement("canvas");
-//       canvas.width = w; canvas.height = h;
-//       canvas.getContext("2d").drawImage(img, 0, 0, w, h);
-//       canvas.toBlob(resolve, "image/jpeg", 0.85);
-//     };
-//     img.src = url;
-//   });
-// }
-// 
+
 function photoRotation(id) {
   let hash = 0;
   for (let i = 0; i < id.length; i++) hash = (hash * 31 + id.charCodeAt(i)) | 0;
@@ -494,7 +464,54 @@ function AllPrayedScreen({ prayedCount, praySessionCount, total, onWeek, onKeepP
   );
 }
 
+
+function getSetup() {
+  try { const r = localStorage.getItem("letspray-setup"); return r ? JSON.parse(r) : null; }
+  catch (_e) { return null; }
+}
+
+function SetupScreen({ onComplete }) {
+  const [name, setName] = React.useState("");
+  const [sub, setSub] = React.useState("");
+  const [pw, setPw] = React.useState("");
+  const [pw2, setPw2] = React.useState("");
+  const [err, setErr] = React.useState("");
+  function submit() {
+    if (!name.trim()) return setErr("Please enter your ministry name.");
+    if (pw.length < 6) return setErr("Password must be at least 6 characters.");
+    if (pw !== pw2) return setErr("Passwords don’t match.");
+    const data = { name: name.trim(), sub: sub.trim(), password: pw };
+    try { localStorage.setItem("letspray-setup", JSON.stringify(data)); } catch (_e) {}
+    onComplete(data);
+  }
+  const inp = { width:"100%", boxSizing:"border-box", background:"#222527", border:"1px solid #333839", borderRadius:10, color:"#e8e0d4", padding:"12px 14px", fontSize:15, fontFamily:"'Inter', system-ui, sans-serif", outline:"none" };
+  const lbl = { fontSize:11, color:"#7a8082", textTransform:"uppercase", letterSpacing:"0.06em", fontWeight:600, display:"block", marginBottom:5 };
+  return (
+    <div style={{ minHeight:"100vh", background:"#1a1c1e", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", padding:"32px 24px" }}>
+      <svg width="48" height="48" viewBox="0 0 20 20" style={{ marginBottom:16 }}>
+        <path d="M10,2 L11.768,8.232 L18,10 L11.768,11.768 L10,18 L8.232,11.768 L2,10 L8.232,8.232 Z" fill="#6b9e78" />
+      </svg>
+      <h1 style={{ fontFamily:"'Lora', Georgia, serif", fontSize:28, fontWeight:600, color:"#e8e0d4", margin:"0 0 6px", textAlign:"center" }}>Let’s Pray</h1>
+      <p style={{ fontSize:13, color:"#7a8082", margin:"0 0 32px", textAlign:"center" }}>First-time setup — takes about 30 seconds</p>
+      <div style={{ width:"100%", maxWidth:360, display:"flex", flexDirection:"column", gap:12 }}>
+        <div><label style={lbl}>Ministry Name</label><input value={name} onChange={e => setName(e.target.value)} placeholder="e.g. First Baptist Students" style={inp} /></div>
+        <div><label style={lbl}>Subtitle <span style={{ opacity:0.5, fontWeight:400, textTransform:"none" }}>(optional)</span></label><input value={sub} onChange={e => setSub(e.target.value)} placeholder='e.g. "Let’s Pray"' style={inp} /></div>
+        <div><label style={lbl}>Admin Password</label><input type="password" value={pw} onChange={e => setPw(e.target.value)} placeholder="Choose a password (6+ characters)" style={inp} /></div>
+        <div><label style={lbl}>Confirm Password</label><input type="password" value={pw2} onChange={e => setPw2(e.target.value)} onKeyDown={e => e.key === "Enter" && submit()} placeholder="Re-enter password" style={inp} /></div>
+        {err && <p style={{ color:"#c07070", fontSize:13, margin:0 }}>{err}</p>}
+        <button onClick={submit} style={{ background:"#6b9e78", border:"none", color:"#fff", borderRadius:12, padding:"14px 0", fontSize:15, fontWeight:600, cursor:"pointer", fontFamily:"'Inter', system-ui, sans-serif", marginTop:4 }}>Get Started</button>
+      </div>
+    </div>
+  );
+}
+
 export default function App() {
+  const [setup, setSetup] = React.useState(() => getSetup());
+  if (!setup) return <SetupScreen onComplete={s => setSetup(s)} />;
+  const ADMIN_PASSWORD = setup.password;
+  const MINISTRY_NAME = setup.name;
+  const MINISTRY_SUB = setup.sub || "";
+
   const [people, setPeople] = useState([]);
   const [loaded, setLoaded] = useState(false);
   const [view, setView] = useState("pray");
@@ -524,7 +541,6 @@ export default function App() {
   const [nameInput, setNameInput] = useState("");
   const [confirmPromo, setConfirmPromo] = useState(false);
   const [confirmClearInactive, setConfirmClearInactive] = useState(false);
-  // 
   const [weekHistory, setWeekHistory] = useState([]);
   const [bdayInput, setBdayInput] = useState("");
 
@@ -547,32 +563,6 @@ export default function App() {
   const [adminPwError, setAdminPwError] = useState("");
   const [pendingView, setPendingView] = useState(null);
 
-  // useEffect(() => {
-  // // Check if push notifications are supported
-  // const isIos = /iphone|ipad|ipod/i.test(navigator.userAgent);
-  // const isStandalone = window.navigator.standalone === true;
-  //
-  // if (hasSW && hasPush) {
-  // // Full push support (Android, or iOS 16.4+ on home screen)
-  // reg.pushManager.getSubscription().then(sub => {
-  // });
-  // }).catch(() => {});
-  // } else if (isIos && !isStandalone) {
-  // // iOS in browser — needs to add to home screen first
-  // } else if (isIos && isStandalone && !hasPush) {
-  // // iOS on home screen but iOS < 16.4 — push not supported
-  // } else if (hasSW && !hasPush) {
-  // }
-  // // Register service worker and mark device as seen today
-  // reg.pushManager.getSubscription().then(sub => {
-  // if (sub) {
-  // const hash = btoa(sub.endpoint).slice(0, 40);
-  // }
-  // });
-  // }).catch(() => {});
-  // } else {
-  // }
-  // }, []);
 
   useEffect(() => {
     const link = document.createElement("link");
@@ -753,14 +743,6 @@ export default function App() {
   const pinnedPerson = pinnedPersonId ? activePeople.find(p => p.id === pinnedPersonId) ?? null : null;
   const current = pinnedPerson ?? deck[cardIdx] ?? null;
 
-  // // Preload adjacent photos so they're cached before the swipe animation ends
-  // React.useEffect(() => {
-  // const toPreload = [deck[cardIdx - 1], deck[cardIdx + 1]].filter(Boolean);
-  // toPreload.forEach(p => {
-  // const img = new Image();
-  // }
-  // });
-  // }, [cardIdx, deck]);
   const prayedPeople = activePeople.filter(p => withinWeek(p.prayedAt));
 
   // Streak: consecutive weeks where count >= total (everyone prayed for)
@@ -938,35 +920,6 @@ export default function App() {
 
   function deactivate(id) { setPeople(prev => prev.map(p => p.id === id ? { ...p, active: false, updatedAt: Date.now() } : p)); }
   function restore(id) { setPeople(prev => prev.map(p => p.id === id ? { ...p, active: true, updatedAt: Date.now() } : p)); }
-  // try {
-  // // Resize client-side before upload
-  // const form = new FormData();
-  // form.append("photo", resized, "photo.jpg");
-  // form.append("personId", personId);
-  // const res = await fetch("/api/photo-upload", { method: "POST", body: form });
-  // const data = await res.json();
-  // if (data.url) {
-  // setPeople(prev => prev.map(p => p.id === personId
-  // : p
-  // ));
-  // } else {
-  // alert("Upload error: " + JSON.stringify(data));
-  // }
-  // } catch (e) { alert("Upload failed: " + e.message); }
-  // }
-  //
-
-  // await fetch("/api/photo-upload", {
-  // method: "DELETE",
-  // headers: { "Content-Type": "application/json" },
-  // body: JSON.stringify({ personId }),
-  // }).catch(() => {});
-  // setPeople(prev => prev.map(p => p.id === personId
-  // : p
-  // ));
-  // }
-  //
-
   function exportRoster() {
     const rows = [
       ["First Name", "Last Name", "Type", "Group", "Grade", "Birthday"],
@@ -1122,8 +1075,8 @@ export default function App() {
         <div style={S.logoWrap}>
           <svg width="16" height="16" viewBox="0 0 20 20" style={{ flexShrink:0, marginTop:2 }}><path d="M10,2 L11.768,8.232 L18,10 L11.768,11.768 L10,18 L8.232,11.768 L2,10 L8.232,8.232 Z" fill="#6b9e78" /></svg>
           <div style={{ display:"flex", flexDirection:"column", lineHeight:1 }}>
-            <span style={S.logoText}>Let’s Pray</span>
-            <span style={S.logoSub}>Calvary Students</span>
+            <span style={S.logoText}>{MINISTRY_NAME}</span>
+            {MINISTRY_SUB && <span style={S.logoSub}>{MINISTRY_SUB}</span>}
           </div>
         </div>
         <div style={{ ...S.weekBar, cursor: "pointer" }} onClick={() => setView("week")}>
@@ -1281,8 +1234,6 @@ export default function App() {
                           </div>
                         )}
                       </div>
-
-                      
 
                       {/* Name — primary */}
                       <h2 style={S.cardName}>{current?.name}</h2>
