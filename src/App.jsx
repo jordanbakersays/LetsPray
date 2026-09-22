@@ -1435,7 +1435,6 @@ export default function App() {
                       // </div>
                       // )}
                       //
-                      */}
 
                       {/* Name — primary */}
                       <h2 style={S.cardName}>{current?.name}</h2>
