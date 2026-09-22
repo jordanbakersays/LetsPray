@@ -763,7 +763,12 @@ function AppMain({ settings }) {
     if (f === "hs-leaders") list = list.filter(p => p.type === "leader" && p.group === "hs");
     if (f === "ms-leaders") list = list.filter(p => p.type === "leader" && p.group === "ms");
     // Always exclude prayed-this-week from swipe deck
-    const unprayed = list.filter(p => !withinWeek(p.prayedAt));
+   const unprayed = list.filter(p => {
+  const prayedAt = f === "my-group" && currentLeaderId
+    ? p.leaderPrayerDates?.[currentLeaderId]
+    : p.prayedAt;
+  return !withinWeek(prayedAt);
+});
     const shuffled = shuffle(unprayed.map(p => p.id));
     // Move today's birthday person to front if they're in the deck
     const todayBdayId = unprayed.find(p => getBirthdayStatus(p.birthday)?.today)?.id;
@@ -785,16 +790,50 @@ function AppMain({ settings }) {
   useEffect(() => {
     if (!loaded) return;
     setDeckIds(prev => {
-      const prayedSet = new Set(activePeople.filter(p => withinWeek(p.prayedAt)).map(p => p.id));
+     const prayedSet = new Set(
+  activePeople
+    .filter(p => {
+      const prayedAt = filter === "my-group" && currentLeaderId
+        ? p.leaderPrayerDates?.[currentLeaderId]
+        : p.prayedAt;
+      return withinWeek(prayedAt);
+    })
+    .map(p => p.id)
+);
       const filtered = prev.filter(id => !prayedSet.has(id));
       if (filtered.length !== prev.length) { setCardIdx(i => Math.min(i, Math.max(filtered.length - 1, 0))); }
       return filtered;
     });
-  }, [people]);
+}, [people, filter, currentLeaderId]);
 
   const deck = (() => {
-    if (order === "alpha") return getFiltered().filter(p => !withinWeek(p.prayedAt)).slice().sort((a, b) => a.name.localeCompare(b.name));
-    if (order === "oldest") return getFiltered().filter(p => !withinWeek(p.prayedAt)).slice().sort((a, b) => (a.prayedAt || 0) - (b.prayedAt || 0));
+  if (order === "alpha") return getFiltered()
+  .filter(p => {
+    const prayedAt = filter === "my-group" && currentLeaderId
+      ? p.leaderPrayerDates?.[currentLeaderId]
+      : p.prayedAt;
+    return !withinWeek(prayedAt);
+  })
+  .slice()
+  .sort((a, b) => a.name.localeCompare(b.name));
+
+if (order === "oldest") return getFiltered()
+  .filter(p => {
+    const prayedAt = filter === "my-group" && currentLeaderId
+      ? p.leaderPrayerDates?.[currentLeaderId]
+      : p.prayedAt;
+    return !withinWeek(prayedAt);
+  })
+  .slice()
+  .sort((a, b) => {
+    const aDate = filter === "my-group" && currentLeaderId
+      ? a.leaderPrayerDates?.[currentLeaderId]
+      : a.prayedAt;
+    const bDate = filter === "my-group" && currentLeaderId
+      ? b.leaderPrayerDates?.[currentLeaderId]
+      : b.prayedAt;
+    return (aDate || 0) - (bDate || 0);
+  });
     const map = Object.fromEntries(activePeople.map(p => [p.id, p]));
     return deckIds.map(id => map[id]).filter(Boolean);
   })();
@@ -928,7 +967,11 @@ function AppMain({ settings }) {
       const weekStart = getWeekStartET();
       const inSameWeek = p.prayedAt && p.prayedAt >= weekStart;
       const weekDateStr = getWeekDateStringET();
-      return { ...p, prayedAt: Date.now(), prayedWeek: weekStart, prayedWeekDate: weekDateStr, prayCount: (p.prayCount || 0) + 1, weekPrayCount: inSameWeek ? (p.weekPrayCount || 1) + 1 : 1, updatedAt: Date.now() };
+      const leaderPrayerDates = { ...(p.leaderPrayerDates || {}) };
+if (currentLeaderId) {
+  leaderPrayerDates[currentLeaderId] = Date.now();
+}
+      return { ...p, leaderPrayerDates, prayedAt: Date.now(), prayedWeek: weekStart, prayedWeekDate: weekDateStr, prayCount: (p.prayCount || 0) + 1, weekPrayCount: inSameWeek ? (p.weekPrayCount || 1) + 1 : 1, updatedAt: Date.now() };
     }));
     if (current?.id) dismissBday(current.id);
     setPinnedPersonId(null);
