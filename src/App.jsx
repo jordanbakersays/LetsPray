@@ -2,8 +2,8 @@ import React, { useState, useEffect, useCallback, useRef } from "react";
 import { ChevronLeft, ChevronRight, Heart, Plus, Trash2, Upload, X, RefreshCw, BookOpen, RotateCcw, Cake, BarChart2, Bell, Star, Lightbulb } from "lucide-react";
 
 const STORAGE_KEY = "intercede-people-v2";
-// Admin password and branding set during first-run setup
-const SETUP_KEY = "letspray-setup";
+// Settings loaded from KV on startup
+const SETUP_KEY = "letspray-setup"; // legacy local fallback
 
 const TAP_KEY = "intercede-tap-ts";
 const TAP_TTL = 24 * 60 * 60 * 1000;
@@ -45,6 +45,22 @@ function isAdminAuthed() {
 function setAdminAuthed() {
   localStorage.setItem(ADMIN_KEY, JSON.stringify({ ts: Date.now() }));
 }
+async function apiLoadSettings() {
+  try {
+    const res = await fetch("/api/data?key=settings");
+    if (!res.ok) return null;
+    return await res.json();
+  } catch (_e) { return null; }
+}
+
+async function apiSaveSettings(settings) {
+  await fetch("/api/data?key=settings", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(settings),
+  });
+}
+
 async function apiLoad() {
   const res = await fetch("/api/data");
   if (!res.ok) throw new Error("load failed");
@@ -465,52 +481,73 @@ function AllPrayedScreen({ prayedCount, praySessionCount, total, onWeek, onKeepP
 }
 
 
-function getSetup() {
-  try { const r = localStorage.getItem("letspray-setup"); return r ? JSON.parse(r) : null; }
-  catch (_e) { return null; }
-}
-
 function SetupScreen({ onComplete }) {
   const [name, setName] = React.useState("");
   const [sub, setSub] = React.useState("");
   const [pw, setPw] = React.useState("");
   const [pw2, setPw2] = React.useState("");
   const [err, setErr] = React.useState("");
-  function submit() {
+  const [saving, setSaving] = React.useState(false);
+
+  async function submit() {
     if (!name.trim()) return setErr("Please enter your ministry name.");
     if (pw.length < 6) return setErr("Password must be at least 6 characters.");
     if (pw !== pw2) return setErr("Passwords don’t match.");
+    setSaving(true);
     const data = { name: name.trim(), sub: sub.trim(), password: pw };
-    try { localStorage.setItem("letspray-setup", JSON.stringify(data)); } catch (_e) {}
+    await apiSaveSettings(data).catch(() => {});
     onComplete(data);
   }
+
   const inp = { width:"100%", boxSizing:"border-box", background:"#222527", border:"1px solid #333839", borderRadius:10, color:"#e8e0d4", padding:"12px 14px", fontSize:15, fontFamily:"'Inter', system-ui, sans-serif", outline:"none" };
   const lbl = { fontSize:11, color:"#7a8082", textTransform:"uppercase", letterSpacing:"0.06em", fontWeight:600, display:"block", marginBottom:5 };
+
   return (
     <div style={{ minHeight:"100vh", background:"#1a1c1e", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", padding:"32px 24px" }}>
       <svg width="48" height="48" viewBox="0 0 20 20" style={{ marginBottom:16 }}>
         <path d="M10,2 L11.768,8.232 L18,10 L11.768,11.768 L10,18 L8.232,11.768 L2,10 L8.232,8.232 Z" fill="#6b9e78" />
       </svg>
       <h1 style={{ fontFamily:"'Lora', Georgia, serif", fontSize:28, fontWeight:600, color:"#e8e0d4", margin:"0 0 6px", textAlign:"center" }}>Let’s Pray</h1>
-      <p style={{ fontSize:13, color:"#7a8082", margin:"0 0 32px", textAlign:"center" }}>First-time setup — takes about 30 seconds</p>
+      <p style={{ fontSize:13, color:"#7a8082", margin:"0 0 32px", textAlign:"center" }}>Admin setup — only needs to be done once</p>
       <div style={{ width:"100%", maxWidth:360, display:"flex", flexDirection:"column", gap:12 }}>
         <div><label style={lbl}>Ministry Name</label><input value={name} onChange={e => setName(e.target.value)} placeholder="e.g. First Baptist Students" style={inp} /></div>
         <div><label style={lbl}>Subtitle <span style={{ opacity:0.5, fontWeight:400, textTransform:"none" }}>(optional)</span></label><input value={sub} onChange={e => setSub(e.target.value)} placeholder='e.g. "Let’s Pray"' style={inp} /></div>
         <div><label style={lbl}>Admin Password</label><input type="password" value={pw} onChange={e => setPw(e.target.value)} placeholder="Choose a password (6+ characters)" style={inp} /></div>
         <div><label style={lbl}>Confirm Password</label><input type="password" value={pw2} onChange={e => setPw2(e.target.value)} onKeyDown={e => e.key === "Enter" && submit()} placeholder="Re-enter password" style={inp} /></div>
         {err && <p style={{ color:"#c07070", fontSize:13, margin:0 }}>{err}</p>}
-        <button onClick={submit} style={{ background:"#6b9e78", border:"none", color:"#fff", borderRadius:12, padding:"14px 0", fontSize:15, fontWeight:600, cursor:"pointer", fontFamily:"'Inter', system-ui, sans-serif", marginTop:4 }}>Get Started</button>
+        <button onClick={submit} disabled={saving} style={{ background:"#6b9e78", border:"none", color:"#fff", borderRadius:12, padding:"14px 0", fontSize:15, fontWeight:600, cursor:"pointer", fontFamily:"'Inter', system-ui, sans-serif", marginTop:4, opacity: saving ? 0.7 : 1 }}>{saving ? "Saving…" : "Get Started"}</button>
       </div>
     </div>
   );
 }
 
+function LoadingScreen() {
+  return (
+    <div style={{ minHeight:"100vh", background:"#1a1c1e", display:"flex", alignItems:"center", justifyContent:"center" }}>
+      <svg width="36" height="36" viewBox="0 0 20 20" style={{ opacity:0.5 }}>
+        <path d="M10,2 L11.768,8.232 L18,10 L11.768,11.768 L10,18 L8.232,11.768 L2,10 L8.232,8.232 Z" fill="#6b9e78" />
+      </svg>
+    </div>
+  );
+}
+
 export default function App() {
-  const [setup, setSetup] = React.useState(() => getSetup());
-  if (!setup) return <SetupScreen onComplete={s => setSetup(s)} />;
-  const ADMIN_PASSWORD = setup.password;
-  const MINISTRY_NAME = setup.name;
-  const MINISTRY_SUB = setup.sub || "";
+  const [settings, setSettings] = React.useState(null); // null = loading, false = needs setup
+  const [settingsLoaded, setSettingsLoaded] = React.useState(false);
+
+  React.useEffect(() => {
+    apiLoadSettings().then(s => {
+      setSettings(s || false);
+      setSettingsLoaded(true);
+    });
+  }, []);
+
+  if (!settingsLoaded) return <LoadingScreen />;
+  if (!settings) return <SetupScreen onComplete={s => setSettings(s)} />;
+
+  const ADMIN_PASSWORD = settings.password;
+  const MINISTRY_NAME = settings.name;
+  const MINISTRY_SUB = settings.sub || "";
 
   const [people, setPeople] = useState([]);
   const [loaded, setLoaded] = useState(false);
@@ -541,6 +578,7 @@ export default function App() {
   const [nameInput, setNameInput] = useState("");
   const [confirmPromo, setConfirmPromo] = useState(false);
   const [confirmClearInactive, setConfirmClearInactive] = useState(false);
+  const [reminderExpanded, setReminderExpanded] = useState(() => { try { return localStorage.getItem('intercede-reminder-expanded') !== 'false'; } catch { return true; } });
   const [weekHistory, setWeekHistory] = useState([]);
   const [bdayInput, setBdayInput] = useState("");
 
@@ -1520,6 +1558,7 @@ export default function App() {
                       </div>
                     ) : (
                       <div style={S.nameRow}>
+
                         <span style={S.personName}>{p.name}</span>
                         <button onClick={() => { setEditNameFor(p.id); setNameInput(p.name); setEditBdayFor(null); }}
                           style={S.editNameBtn} title="Edit name">✎</button>
