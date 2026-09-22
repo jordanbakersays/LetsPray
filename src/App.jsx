@@ -1639,16 +1639,48 @@ setPeople(prev => [...prev, {
                     {p.birthday && <button onClick={() => saveBirthday(p.id, "")} style={S.reqCancelBtn} title="Clear"><X size={12} /></button>}
                   </div>
                 )}
-                {p.type === "student" && (
-                  <div style={S.gradeRow}>
-                    <span style={S.gradeLabel}>Grade</span>
-                    <select value={p.grade || ""} onChange={e => setPeople(prev => prev.map(q => q.id === p.id ? { ...q, grade: e.target.value ? Number(e.target.value) : null, updatedAt: Date.now() } : q))}
-                      style={S.gradeSelect}>
-                      <option value="">—</option>
-                      {[5,6,7,8,9,10,11,12].map(g => <option key={g} value={g}>{`Grade ${g}`}</option>)}
-                    </select>
-                  </div>
-                )}
+              {p.type === "student" && (
+  <>
+    <div style={S.gradeRow}>
+      <span style={S.gradeLabel}>Grade</span>
+      <select
+        value={p.grade || ""}
+        onChange={e => setPeople(prev => prev.map(q =>
+          q.id === p.id
+            ? { ...q, grade: e.target.value ? Number(e.target.value) : null, updatedAt: Date.now() }
+            : q
+        ))}
+        style={S.gradeSelect}
+      >
+        <option value="">—</option>
+        {[5,6,7,8,9,10,11,12].map(g => (
+          <option key={g} value={g}>{`Grade ${g}`}</option>
+        ))}
+      </select>
+    </div>
+
+    <div style={{ ...S.gradeRow, marginTop:6 }}>
+      <span style={S.gradeLabel}>Small Group</span>
+      <select
+        value={p.smallGroupLeader || ""}
+        onChange={e => setPeople(prev => prev.map(q =>
+          q.id === p.id
+            ? { ...q, smallGroupLeader: e.target.value, updatedAt: Date.now() }
+            : q
+        ))}
+        style={S.gradeSelect}
+      >
+        <option value="">No Leader</option>
+        {people
+          .filter(q => q.active !== false && q.type === "leader")
+          .sort((a, b) => a.name.localeCompare(b.name))
+          .map(q => (
+            <option key={q.id} value={q.id}>{q.name}</option>
+          ))}
+      </select>
+    </div>
+  </>
+)}
               </div>
             ))}
           </div>
