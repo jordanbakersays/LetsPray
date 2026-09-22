@@ -546,7 +546,7 @@ class ErrorBoundary extends React.Component {
 }
 
 export default function App() {
-  const [settings, setSettings] = React.useState(null); // null = loading, false = needs setup
+  const [settings, setSettings] = React.useState(null);
   const [settingsLoaded, setSettingsLoaded] = React.useState(false);
 
   React.useEffect(() => {
@@ -558,7 +558,10 @@ export default function App() {
 
   if (!settingsLoaded) return <LoadingScreen />;
   if (!settings) return <SetupScreen onComplete={s => setSettings(s)} />;
+  return <AppMain settings={settings} />;
+}
 
+function AppMain({ settings }) {
   const ADMIN_PASSWORD = settings.password;
   const MINISTRY_NAME = settings.name;
   const MINISTRY_SUB = settings.sub || "";
