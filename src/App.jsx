@@ -3,11 +3,7 @@ import { ChevronLeft, ChevronRight, Heart, Plus, Trash2, Upload, X, RefreshCw, B
 
 const STORAGE_KEY = "intercede-people-v2";
 const ADMIN_PASSWORD = "Promo1398!";
-// PUSH: Paste your VAPID public key here and uncomment:
-// const VAPID_PUBLIC_KEY = "YOUR_VAPID_PUBLIC_KEY_HERE";
 
-// PUSH: uncomment this function to enable push notifications
-// function urlBase64ToUint8Array(base64String) {
 //   const padding = "=".repeat((4 - base64String.length % 4) % 4);
 //   const base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/");
 //   const rawData = atob(base64);
@@ -71,18 +67,12 @@ async function apiSave(people, force = false) {
   });
 }
 
-// PUSH: uncomment function below to enable
-// async function apiRegisterPush(subscription, reminderTime) {
-//   await fetch("/api/push-register", {
 //     method: "POST",
 //     headers: { "Content-Type": "application/json" },
 //     body: JSON.stringify({ subscription, reminderTime }),
 //   });
 // }
 // 
-// PUSH: uncomment function below to enable
-// async function apiMarkSeen(endpointHash) {
-//   await fetch("/api/push-check", {
 //     method: "POST",
 //     headers: { "Content-Type": "application/json" },
 //     body: JSON.stringify({ endpointHash }),
@@ -110,8 +100,6 @@ function getWeekLabel(weekStartTs) {
 }
 
 // Stable per-person rotation so the card looks the same each load but varies per person
-// PHOTO: uncomment function below to enable
-// async function resizeImage(file, maxSize) {
 //   return new Promise((resolve) => {
 //     const img = new Image();
 //     const url = URL.createObjectURL(file);
@@ -536,14 +524,6 @@ export default function App() {
   const [nameInput, setNameInput] = useState("");
   const [confirmPromo, setConfirmPromo] = useState(false);
   const [confirmClearInactive, setConfirmClearInactive] = useState(false);
-  // PUSH: Uncomment the following state variables to enable push notifications:
-  // const [pushSupported, setPushSupported] = useState(false);
-  // const [pushEnabled, setPushEnabled] = useState(false);
-  // const [pushTime, setPushTime] = useState(() => localStorage.getItem("intercede-push-time") || "09:00");
-  // const [showIosGuide, setShowIosGuide] = useState(false);
-  // const [pushLoading, setPushLoading] = useState(false);
-  // const [pushError, setPushError] = useState("");
-  // const [reminderExpanded, setReminderExpanded] = useState(() => { try { return localStorage.getItem('intercede-reminder-expanded') !== 'false'; } catch { return true; } });
   // 
   const [weekHistory, setWeekHistory] = useState([]);
   const [bdayInput, setBdayInput] = useState("");
@@ -567,44 +547,30 @@ export default function App() {
   const [adminPwError, setAdminPwError] = useState("");
   const [pendingView, setPendingView] = useState(null);
 
-  // PUSH: Uncomment the following useEffect to enable push detection:
   // useEffect(() => {
   // // Check if push notifications are supported
   // const isIos = /iphone|ipad|ipod/i.test(navigator.userAgent);
   // const isStandalone = window.navigator.standalone === true;
-  // const hasSW = "serviceWorker" in navigator;
-  // const hasPush = "PushManager" in window;
   //
   // if (hasSW && hasPush) {
   // // Full push support (Android, or iOS 16.4+ on home screen)
-  // setPushSupported(true);
-  // navigator.serviceWorker.ready.then(reg => {
   // reg.pushManager.getSubscription().then(sub => {
-  // if (sub) setPushEnabled(true);
   // });
   // }).catch(() => {});
   // } else if (isIos && !isStandalone) {
   // // iOS in browser — needs to add to home screen first
-  // setPushSupported("ios-prompt");
   // } else if (isIos && isStandalone && !hasPush) {
   // // iOS on home screen but iOS < 16.4 — push not supported
-  // setPushSupported("ios-unsupported");
   // } else if (hasSW && !hasPush) {
-  // // SW available but no PushManager — unsupported browser
-  // setPushSupported(false);
   // }
   // // Register service worker and mark device as seen today
-  // if ("serviceWorker" in navigator) {
-  // navigator.serviceWorker.register("/sw.js").then(reg => {
   // reg.pushManager.getSubscription().then(sub => {
   // if (sub) {
   // const hash = btoa(sub.endpoint).slice(0, 40);
-  // apiMarkSeen(hash).catch(() => {});
   // }
   // });
   // }).catch(() => {});
   // } else {
-  // apiMarkSeen(null).catch(() => {});
   // }
   // }, []);
 
@@ -787,14 +753,11 @@ export default function App() {
   const pinnedPerson = pinnedPersonId ? activePeople.find(p => p.id === pinnedPersonId) ?? null : null;
   const current = pinnedPerson ?? deck[cardIdx] ?? null;
 
-  // PHOTO: Uncomment photo preload effect:
   // // Preload adjacent photos so they're cached before the swipe animation ends
   // React.useEffect(() => {
   // const toPreload = [deck[cardIdx - 1], deck[cardIdx + 1]].filter(Boolean);
   // toPreload.forEach(p => {
-  // if (p?.photoUrl) {
   // const img = new Image();
-  // img.src = p.photoUrl;
   // }
   // });
   // }, [cardIdx, deck]);
@@ -948,10 +911,6 @@ export default function App() {
 
   const [addGrade, setAddGrade] = useState("");
   const [addBday, setAddBday] = useState("");
-  // PHOTO: const [justAddedId, setJustAddedId] = useState(null);
-  // PHOTO: const [uploadingPhotoFor, setUploadingPhotoFor] = useState(null);
-  // PHOTO: const [lightboxUrl, setLightboxUrl] = useState(null);
-  // PHOTO: const [lightboxName, setLightboxName] = useState(null);
   const [peopleSort, setPeopleSort] = useState("name");
   const [peopleTypeFilter, setPeopleTypeFilter] = useState("all");
   const [rosterGroup, setRosterGroup] = useState("all"); // all | ms | hs | leader
@@ -979,12 +938,8 @@ export default function App() {
 
   function deactivate(id) { setPeople(prev => prev.map(p => p.id === id ? { ...p, active: false, updatedAt: Date.now() } : p)); }
   function restore(id) { setPeople(prev => prev.map(p => p.id === id ? { ...p, active: true, updatedAt: Date.now() } : p)); }
-  // PHOTO: Uncomment uploadPhoto to enable photos:
-  // async function uploadPhoto(personId, file) {
-  // setUploadingPhotoFor(personId);
   // try {
   // // Resize client-side before upload
-  // const resized = await resizeImage(file, 600);
   // const form = new FormData();
   // form.append("photo", resized, "photo.jpg");
   // form.append("personId", personId);
@@ -992,26 +947,21 @@ export default function App() {
   // const data = await res.json();
   // if (data.url) {
   // setPeople(prev => prev.map(p => p.id === personId
-  // ? { ...p, photoUrl: data.url + "?t=" + Date.now(), updatedAt: Date.now() }
   // : p
   // ));
   // } else {
   // alert("Upload error: " + JSON.stringify(data));
   // }
   // } catch (e) { alert("Upload failed: " + e.message); }
-  // setUploadingPhotoFor(null);
   // }
   //
 
-  // PHOTO: Uncomment deletePhoto to enable photos:
-  // async function deletePhoto(personId) {
   // await fetch("/api/photo-upload", {
   // method: "DELETE",
   // headers: { "Content-Type": "application/json" },
   // body: JSON.stringify({ personId }),
   // }).catch(() => {});
   // setPeople(prev => prev.map(p => p.id === personId
-  // ? { ...p, photoUrl: null, updatedAt: Date.now() }
   // : p
   // ));
   // }
@@ -1144,66 +1094,6 @@ export default function App() {
     setWeekHistory(newHistory);
     await apiSaveHistory(newHistory);
   }
-
-  // PUSH: Uncomment enablePush to enable push:
-  // async function enablePush() {
-  // setPushLoading(true);
-  // setPushError("");
-  // try {
-  // const reg = await navigator.serviceWorker.ready;
-  // const permission = await Notification.requestPermission();
-  // if (permission === "denied") {
-  // setPushError("Notifications blocked. Go to Settings → Safari → [this site] → Allow Notifications.");
-  // setPushLoading(false);
-  // return;
-  // }
-  // if (permission !== "granted") {
-  // setPushError("Permission not granted. Please try again.");
-  // setPushLoading(false);
-  // return;
-  // }
-  // const sub = await reg.pushManager.subscribe({
-  // userVisibleOnly: true,
-  // applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
-  // });
-  // const hash = btoa(sub.endpoint).slice(0, 40);
-  // await apiRegisterPush(sub.toJSON(), pushTime);
-  // localStorage.setItem("intercede-push-time", pushTime);
-  // localStorage.setItem("intercede-push-hash", hash);
-  // setPushEnabled(true);
-  // setReminderExpanded(false);
-  // try { localStorage.setItem('intercede-reminder-expanded', 'false'); } catch (_e) {}
-  // } catch (e) {
-  // setPushError("Error: " + (e.message || "Could not enable notifications."));
-  // }
-  // setPushLoading(false);
-  // }
-  //
-
-  // PUSH: Uncomment updatePushTime to enable push:
-  // async function updatePushTime(time) {
-  // setPushTime(time);
-  // localStorage.setItem("intercede-push-time", time);
-  // if (pushEnabled) {
-  // try {
-  // const reg = await navigator.serviceWorker.ready;
-  // const sub = await reg.pushManager.getSubscription();
-  // if (sub) await apiRegisterPush(sub.toJSON(), time);
-  // } catch (_e) {}
-  // }
-  // }
-  //
-
-  // PUSH: Uncomment disablePush to enable push:
-  // async function disablePush() {
-  // try {
-  // const reg = await navigator.serviceWorker.ready;
-  // const sub = await reg.pushManager.getSubscription();
-  // if (sub) await sub.unsubscribe();
-  // setPushEnabled(false);
-  // } catch (_e) {}
-  // }
-  //
 
   function submitAdminPw() {
     if (adminPwInput === ADMIN_PASSWORD) {
@@ -1392,49 +1282,7 @@ export default function App() {
                         )}
                       </div>
 
-                      {/* PHOTO: Add photo-on-card block here — see Appendix B */}
-                      // {current?.photoUrl && (
-                      // <div style={{
-                      // position: "absolute",
-                      // top: 20,
-                      // right: 20,
-                      // zIndex: 3,
-                      // display: "inline-block",
-                      // }}>
-                      // {/* Tape strip */}
-                      // <div style={{
-                      // position: "absolute",
-                      // top: -7,
-                      // left: "50%",
-                      // transform: "translateX(-50%)",
-                      // width: 42,
-                      // height: 12,
-                      // background: "rgba(255,255,255,0.55)",
-                      // borderRadius: 2,
-                      // zIndex: 2,
-                      // boxShadow: "0 1px 3px rgba(0,0,0,0.15)",
-                      // }} />
-                      // <img
-                      // src={current.photoUrl}
-                      // alt={current.name}
-                      // onClick={() => { setLightboxUrl(current.photoUrl); setLightboxName(current.name); }}
-                      // style={{
-                      // width: 88,
-                      // height: 66,
-                      // objectFit: "cover",
-                      // display: "block",
-                      // borderRadius: 2,
-                      // transform: `rotate(${photoRotation(current.id)}deg)`,
-                      // boxShadow: "0 3px 12px rgba(0,0,0,0.5), 0 1px 3px rgba(0,0,0,0.3)",
-                      // border: "3px solid #f0ebe4",
-                      // position: "relative",
-                      // zIndex: 1,
-                      // cursor: "pointer",
-                      // }}
-                      // />
-                      // </div>
-                      // )}
-                      //
+                      
 
                       {/* Name — primary */}
                       <h2 style={S.cardName}>{current?.name}</h2>
@@ -1721,4 +1569,4 @@ export default function App() {
                       </div>
                     ) : (
                       <div style={S.nameRow}>
-{/* PHOTO: Add photo upload button here — see Appendix B */}
+
