@@ -744,10 +744,11 @@ function AppMain({ settings }) {
     if (filter === "ms") list = list.filter(p => p.group === "ms");
     if (filter === "hs-students") list = list.filter(p => p.type === "student" && p.group === "hs");
     if (filter === "ms-students") list = list.filter(p => p.type === "student" && p.group === "ms");
+    if (filter === "my-group") list = list.filter(p => p.type === "student" && p.smallGroupLeader === currentLeaderId);
     if (filter === "hs-leaders") list = list.filter(p => p.type === "leader" && p.group === "hs");
     if (filter === "ms-leaders") list = list.filter(p => p.type === "leader" && p.group === "ms");
     return list;
-  }, [people, filter]);
+}, [people, filter, currentLeaderId]);
 
   const buildDeck = useCallback((filterOverride) => {
     const f = filterOverride ?? filter;
@@ -756,6 +757,7 @@ function AppMain({ settings }) {
     if (f === "leaders") list = list.filter(p => p.type === "leader");
     if (f === "hs") list = list.filter(p => p.group === "hs");
     if (f === "ms") list = list.filter(p => p.group === "ms");
+    if (f === "my-group") list = list.filter(p => p.type === "student" && p.smallGroupLeader === currentLeaderId);
     if (f === "hs-students") list = list.filter(p => p.type === "student" && p.group === "hs");
     if (f === "ms-students") list = list.filter(p => p.type === "student" && p.group === "ms");
     if (f === "hs-leaders") list = list.filter(p => p.type === "leader" && p.group === "hs");
@@ -775,7 +777,7 @@ function AppMain({ settings }) {
     setKeepPrayingMode(false);
     setDropdownOpen(false);
     if (shouldShowTap()) setReady(false); else setReady(true);
-  }, [people, filter]);
+}, [people, filter, currentLeaderId]);
 
   useEffect(() => { if (loaded) buildDeck(); }, [loaded, filter, order]);
 
@@ -1228,6 +1230,7 @@ setPeople(prev => [...prev, {
             </div>
             <select value={filter} onChange={e => { setFilter(e.target.value); setCardIdx(0); if (shouldShowTap()) setReady(false); }} style={S.filterSelect}>
               <option value="all">Everyone</option>
+              <option value="my-group">My Group</option>
               <option value="ms-students">MS Students</option>
               <option value="hs-students">HS Students</option>
               <option value="leaders">Leaders</option>
