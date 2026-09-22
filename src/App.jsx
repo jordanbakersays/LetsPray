@@ -1520,4 +1520,508 @@ export default function App() {
                       </div>
                     ) : (
                       <div style={S.nameRow}>
+                        <span style={S.personName}>{p.name}</span>
+                        <button onClick={() => { setEditNameFor(p.id); setNameInput(p.name); setEditBdayFor(null); }}
+                          style={S.editNameBtn} title="Edit name">✎</button>
+                      </div>
+                    )}
+                    <div style={S.personMeta}>
+                      <span style={{ ...S.badgeSm, ...(p.type === "leader" ? S.leaderBadgeSm : S.studentBadgeSm) }}>{p.type}</span>
+                      {p.group && <span style={{ ...S.badgeSm, ...(p.group === "hs" ? S.hsBadgeSm : S.msBadgeSm) }}>{p.group.toUpperCase()}</span>}
+                      {p.type === "student" && p.grade && <span style={S.gradeBadge}>{ordinal(p.grade)} Gr</span>}
+                      {withinWeek(p.prayedAt) && <span style={S.prayedSmall}>✓ prayed</span>}
+                      {(p.prayerRequests || []).length > 0 && <span style={S.reqCountBadge}>{p.prayerRequests.length} req</span>}
+                      {p.birthday && <span style={S.bdayBadgeSm}><Cake size={9} style={{ marginRight: 3 }} />{formatBirthday(p.birthday)}</span>}
+                    </div>
+                  </div>
+                  <div style={S.personActions}>
+                    <button onClick={() => { setEditBdayFor(editBdayFor === p.id ? null : p.id); setBdayInput(p.birthday || ""); setEditNameFor(null); }}
+                      style={{ ...S.iconBtn, color: p.birthday ? C.accent : C.muted }} title="Set birthday"><Cake size={13} /></button>
+                    <button onClick={() => cycleGroup(p.id)} style={{ ...S.iconBtn, color: p.group === "hs" ? "#7aafc4" : p.group === "ms" ? "#8eba95" : C.muted }} title="Cycle HS/MS/none">
+                      <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.02em" }}>{p.group ? p.group.toUpperCase() : "—"}</span>
+                    </button>
+                    <button onClick={() => toggleType(p.id)} style={S.iconBtn} title="Toggle role"><RefreshCw size={13} /></button>
+                    <button onClick={() => deactivate(p.id)} style={{ ...S.iconBtn, color: C.muted }} title="Make inactive"><Trash2 size={13} /></button>
+                  </div>
+                </div>
+                {editBdayFor === p.id && (
+                  <div style={S.bdayEditRow}>
+                    <Cake size={13} style={{ color: C.accent, flexShrink: 0 }} />
+                    <input autoFocus value={bdayInput} onChange={e => setBdayInput(e.target.value)}
+                      onKeyDown={e => { if (e.key === "Enter") saveBirthday(p.id, parseBirthdayStr(bdayInput)); if (e.key === "Escape") setEditBdayFor(null); }}
+                      placeholder="MM-DD  e.g. 03-15" style={S.bdayInput} />
+                    <button onClick={() => saveBirthday(p.id, parseBirthdayStr(bdayInput))} style={S.reqAddBtn}>Save</button>
+                    {p.birthday && <button onClick={() => saveBirthday(p.id, "")} style={S.reqCancelBtn} title="Clear"><X size={12} /></button>}
+                  </div>
+                )}
+                {p.type === "student" && (
+                  <div style={S.gradeRow}>
+                    <span style={S.gradeLabel}>Grade</span>
+                    <select value={p.grade || ""} onChange={e => setPeople(prev => prev.map(q => q.id === p.id ? { ...q, grade: e.target.value ? Number(e.target.value) : null, updatedAt: Date.now() } : q))}
+                      style={S.gradeSelect}>
+                      <option value="">—</option>
+                      {[5,6,7,8,9,10,11,12].map(g => <option key={g} value={g}>{`Grade ${g}`}</option>)}
+                    </select>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
 
+          {/* End-of-year grade promotion */}
+          <div style={S.promoteSection}>
+            {!confirmPromo ? (
+              <button onClick={() => setConfirmPromo(true)} style={S.promoteBtn}>
+                🎓 End of Year — Promote All Grades
+              </button>
+            ) : (
+              <div style={S.promoteConfirm}>
+                <p style={S.promoteConfirmText}>Move every student up one grade? 12th graders will be made inactive.</p>
+                <div style={{ display: "flex", gap: 8 }}>
+                  <button onClick={promoteGrades} style={S.confirmBtn}>Yes, Promote</button>
+                  <button onClick={() => setConfirmPromo(false)} style={S.cancelBtn}>Cancel</button>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {people.filter(p => p.active === false).length > 0 && (
+            <div style={S.inactiveSection}>
+              <p style={S.inactiveHeading}>Inactive</p>
+              {people.filter(p => p.active === false).map(p => (
+                <div key={p.id} style={S.inactiveRow}>
+                  <span style={S.inactiveName}>{p.name}</span>
+                  <div style={{ display: "flex", gap: 6 }}>
+                    <button onClick={() => restore(p.id)} style={S.restoreBtn}>Restore</button>
+                    <button onClick={() => deletePerm(p.id)} style={S.deleteBtn}>Delete</button>
+                  </div>
+                </div>
+              ))}
+            <div style={{ display:"flex", justifyContent:"flex-end", marginTop:8 }}>
+              {!confirmClearInactive ? (
+                <button onClick={() => setConfirmClearInactive(true)} style={{ background:"none", border:"none", color:"#8a5050", fontSize:12, cursor:"pointer", fontFamily:"'Inter', system-ui, sans-serif" }}>
+                  Clear all inactive…
+                </button>
+              ) : (
+                <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+                  <span style={{ fontSize:12, color:C.muted }}>Remove all inactive?</span>
+                  <button onClick={clearAllInactive} style={{ background:"#8a5050", border:"none", color:"#fff", borderRadius:6, padding:"5px 12px", fontSize:12, cursor:"pointer", fontFamily:"'Inter', system-ui, sans-serif" }}>Yes, clear</button>
+                  <button onClick={() => setConfirmClearInactive(false)} style={S.cancelBtn}>Cancel</button>
+                </div>
+              )}
+            </div>
+            </div>
+          )}
+        </div>
+      )}
+
+
+      {/* ─── ROSTER ─── */}
+      {view === "roster" && (
+        <div style={S.importWrap}>
+          {/* Group filter */}
+          <div style={{ display:"flex", gap:0, marginBottom:12, borderRadius:10, overflow:"hidden", border:`1px solid ${C.border}` }}>
+            {[["all","All"],["ms","MS"],["hs","HS"],["leader","Leaders"]].map(([val, label]) => (
+              <button key={val} onClick={() => setRosterGroup(val)} style={{ flex:1, background: rosterGroup === val ? C.accent : C.surface, border:"none", color: rosterGroup === val ? "#fff" : C.muted, padding:"9px 0", fontSize:13, fontWeight: rosterGroup === val ? 600 : 400, cursor:"pointer", fontFamily:"'Inter', system-ui, sans-serif", transition:"background 0.15s" }}>
+                {label}
+              </button>
+            ))}
+          </div>
+
+          {/* Sort filter */}
+          <div style={{ display:"flex", gap:16, marginBottom:12, justifyContent:"center" }}>
+            {[["name","A–Z"],["grade","Grade"],["birthday","Birthday"]].map(([val, label]) => (
+              <button key={val} onClick={() => setRosterSort(val)} style={{ background:"none", border:"none", borderBottom: rosterSort === val ? `2px solid ${C.accent}` : "2px solid transparent", color: rosterSort === val ? C.cream : C.muted, fontSize:13, fontWeight: rosterSort === val ? 500 : 400, padding:"2px 0", cursor:"pointer", fontFamily:"'Inter', system-ui, sans-serif" }}>
+                {label}
+              </button>
+            ))}
+          </div>
+
+          {/* People list */}
+          <div style={{ display:"flex", flexDirection:"column", gap:1 }}>
+            {activePeople
+              .filter(p => rosterGroup === "all" ? true : rosterGroup === "leader" ? p.type === "leader" : p.group === rosterGroup && p.type === "student")
+              .slice().sort((a, b) => {
+                if (rosterSort === "grade") {
+                  const ga = Number(a.grade) || 99;
+                  const gb = Number(b.grade) || 99;
+                  return ga !== gb ? ga - gb : a.name.localeCompare(b.name);
+                }
+                if (rosterSort === "birthday") {
+                  // Sort by days until next birthday (soonest first, just-passed at end)
+                  const daysUntil = (bday) => {
+                    if (!bday) return 9999;
+                    const [m, d] = bday.split("-").map(Number);
+                    const now = new Date(new Date().toLocaleString("en-US", { timeZone: "America/New_York" }));
+                    const thisYear = new Date(now.getFullYear(), m - 1, d);
+                    let diff = Math.ceil((thisYear - now) / 86400000);
+                    if (diff < 0) diff += 365; // already passed this year — push to end
+                    return diff;
+                  };
+                  const da = daysUntil(a.birthday);
+                  const db = daysUntil(b.birthday);
+                  return da !== db ? da - db : a.name.localeCompare(b.name);
+                }
+                return a.name.localeCompare(b.name);
+              })
+              .map(p => {
+                const bdayFmt = p.birthday ? (() => { const [m, d] = p.birthday.split("-"); const date = new Date(2000, parseInt(m)-1, parseInt(d)); return date.toLocaleDateString("en-US", { month:"short", day:"numeric" }); })() : null;
+                return (
+                  <div key={p.id} style={{ display:"flex", alignItems:"center", padding:"11px 14px", background:C.surface, borderRadius:8, gap:12 }}>
+                    {/* Photo */}
+
+                    {/* Text — left aligned below name */}
+                    <div style={{ display:"flex", flexDirection:"column", gap:3, flex:1, minWidth:0 }}>
+                      <span style={{ fontSize:15, color:C.cream, fontFamily:"'Lora', Georgia, serif" }}>{p.name}</span>
+                      <div style={{ display:"flex", gap:8, alignItems:"center", flexWrap:"wrap" }}>
+                        {p.type === "student" && p.grade && (
+                          <span style={{ fontSize:13, color:C.muted, fontWeight:600 }}>{ordinal(p.grade)} Grade</span>
+                        )}
+                        {p.type === "leader" && p.group && (
+                          <span style={{ fontSize:13, color:C.muted, fontWeight:600 }}>{p.group.toUpperCase()}</span>
+                        )}
+                        {bdayFmt && <span style={{ fontSize:13, color:C.muted, display:"flex", alignItems:"center", gap:3 }}><Cake size={12} />{bdayFmt}</span>}
+                      </div>
+                    </div>
+                    {/* Group badge */}
+                    {p.group && <span style={{ fontSize:10, fontWeight:600, color: p.group === "hs" ? "#7aafc4" : C.accent, background: p.group === "hs" ? C.studentBg : C.accentBg, borderRadius:6, padding:"2px 7px", flexShrink:0 }}>{p.group.toUpperCase()}</span>}
+                  </div>
+                );
+              })
+            }
+            {activePeople.filter(p => rosterGroup === "all" ? true : rosterGroup === "leader" ? p.type === "leader" : p.group === rosterGroup && p.type === "student").length === 0 && (
+              <p style={{ textAlign:"center", color:C.muted, fontSize:13, padding:"32px 0" }}>No one in this group yet.</p>
+            )}
+          </div>
+        </div>
+      )}
+
+
+      {/* ─── REPORT ─── */}
+      {view === "report" && (
+        <div style={S.importWrap}>
+          <div style={S.reportBox}>
+            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:12 }}>
+              <div style={{ display:"flex", alignItems:"center", gap:8 }}><BarChart2 size={16} color={C.accent} /><p style={{ ...S.reportTitle, margin:0 }}>Weekly Prayer Report</p></div>
+              <div style={{ display:"flex", gap:12 }}>
+                <button onClick={recalculateHistory} style={{ background:"none", border:"none", color:C.muted, fontSize:11, cursor:"pointer", fontFamily:"'Inter', system-ui, sans-serif" }}>
+                  recalculate
+                </button>
+                {weekHistory.length > 0 && (
+                  <button onClick={async () => { setWeekHistory([]); await apiSaveHistory([]); }} style={{ background:"none", border:"none", color:C.muted, fontSize:11, cursor:"pointer", fontFamily:"'Inter', system-ui, sans-serif" }}>
+                    clear
+                  </button>
+                )}
+              </div>
+            </div>
+            {weekHistory.length === 0 ? (
+              <p style={S.reportEmpty}>Data will appear here after the first Monday reset.</p>
+            ) : weekHistory.map((w, i) => {
+              const pct = w.total > 0 ? Math.round((w.count / w.total) * 100) : 0;
+              const weekEndTs = w.weekStart - 1;
+              const label = i === 0
+                ? `${getWeekLabel(w.prevWeekStart)} – ${getWeekLabel(weekEndTs)} (last week)`
+                : `${getWeekLabel(w.prevWeekStart)} – ${getWeekLabel(weekEndTs)}`;
+              return (
+                <div key={w.weekStart} style={S.reportRow}>
+                  <div style={S.reportRowTop}>
+                    <span style={S.reportWeekLabel}>{label}</span>
+                    <span style={S.reportCount}>{w.count} / {w.total}</span>
+                  </div>
+                  <div style={S.reportBar}>
+                    <div style={{ ...S.reportBarFill, width: `${pct}%` }} />
+                  </div>
+                  <span style={S.reportPct}>{pct}% prayed for</span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* ─── IMPORT ─── */}
+      {view === "import" && (
+        <div style={S.importWrap}>
+          {/* Export */}
+          <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"14px 16px", background:C.surface, border:`1px solid ${C.border}`, borderRadius:12 }}>
+            <div>
+              <p style={{ margin:0, fontSize:14, color:C.cream, fontWeight:500 }}>Export Roster</p>
+              <p style={{ margin:"2px 0 0", fontSize:12, color:C.muted }}>Download all active people as a CSV</p>
+            </div>
+            <button onClick={exportRoster} style={{ background:C.accent, border:"none", color:"#fff", borderRadius:9, padding:"9px 16px", fontSize:13, fontWeight:600, cursor:"pointer", fontFamily:"'Inter', system-ui, sans-serif", display:"flex", alignItems:"center", gap:6, flexShrink:0 }}>
+              <Upload size={14} />Export
+            </button>
+          </div>
+
+          <h3 style={S.importTitle}>Import CSV</h3>
+          <p style={S.importDesc}>
+            Just export whatever roster you already have. The importer only looks for name and birthday columns — everything else is ignored.
+          </p>
+
+          <div style={S.importRulesBox}>
+            <div style={S.importRule}>
+              <span style={{ ...S.importRuleIcon, fontFamily:"monospace", fontSize:13 }}>ID</span>
+              <div>
+                <strong style={{ color: C.cream }}>Names</strong> — recognizes columns like <code style={S.code}>Name</code>, <code style={S.code}>First Name</code>, <code style={S.code}>Last Name</code>, <code style={S.code}>Student</code>. Separate first/last columns are joined automatically. "Smith, John" format is flipped to "John Smith".
+              </div>
+            </div>
+            <div style={S.importRule}>
+              <Cake size={16} color={C.muted} style={{ flexShrink:0, marginTop:2 }} />
+              <div>
+                <strong style={{ color: C.cream }}>Birthdays</strong> — recognizes <code style={S.code}>Birthday</code>, <code style={S.code}>DOB</code>, <code style={S.code}>Birthdate</code>. Accepts MM/DD, MM-DD, or "March 15".
+              </div>
+            </div>
+            <div style={S.importRule}>
+              <span style={{ ...S.importRuleIcon, fontFamily:"monospace", fontSize:13 }}>ST</span>
+              <div>All imported people start as <strong style={{ color: C.cream }}>Students</strong>. Change roles in the People tab after importing.</div>
+            </div>
+          </div>
+
+          <pre style={S.csvPreview}>{`Last Name,First Name,Grade,Email,DOB\nSmith,John,10,j@school.edu,03/15\nLee,Sarah,11,s@school.edu,11-02\nBrown,Mike,9,,`}</pre>
+          <p style={S.importNote}>Above: a messy real-world export — Grade and Email columns are simply ignored.</p>
+
+          <button onClick={() => fileRef.current.click()} style={S.uploadBtn}>
+            <Upload size={16} style={{ marginRight: 8 }} /> Choose File
+          </button>
+          <input ref={fileRef} type="file" accept=".csv,.txt" onChange={handleFile} style={{ display: "none" }} />
+
+          {importData && (
+            <div style={S.previewBox}>
+              <p style={S.previewTitle}>Preview — {importData.length} people found</p>
+              <div style={S.previewScroll}>
+                {importData.slice(0, 12).map((p, i) => (
+                  <div key={i} style={S.previewRow}>
+                    <span style={S.previewName}>{p.name}</span>
+                    {p.birthday
+                      ? <span style={S.bdayBadgeSm}><Cake size={9} style={{ marginRight: 3 }} />{formatBirthday(p.birthday)}</span>
+                      : <span style={{ fontSize: 11, color: C.faint }}>no birthday</span>
+                    }
+                  </div>
+                ))}
+                {importData.length > 12 && <p style={S.moreText}>and {importData.length - 12} more</p>}
+              </div>
+              <div style={S.previewBtnRow}>
+                <button onClick={confirmImport} style={S.confirmBtn}>Import All</button>
+                <button onClick={() => setImportData(null)} style={S.cancelBtn}>Cancel</button>
+              </div>
+            </div>
+          )}
+
+
+        </div>
+      )}
+      {/* Admin footer link */}
+      <div style={S.adminFooter}>
+        {adminAuthed
+          ? <button onClick={() => { setAdminAuthedState(false); localStorage.removeItem(ADMIN_KEY); setView("pray"); }} style={S.adminLink}>lock admin</button>
+          : <button onClick={() => { setAdminPwInput(""); setAdminPwError(""); setShowAdminPrompt(true); }} style={S.adminLink}>admin</button>
+        }
+      </div>
+    </div>
+  );
+}
+
+/* ── Colors ─────────────────────────────────────────────── */
+const C = {
+  bg: "#1a1c1e",        // deep charcoal
+  surface: "#222527",   // slightly lighter charcoal
+  card: "#272b2e",      // card surface
+  border: "#333839",    // subtle border
+  accent: "#6b9e78",    // sage green
+  accentLight: "#8eba95", // lighter sage
+  accentBg: "#1e2820",  // sage tinted bg
+  cream: "#e8e0d4",     // warm white
+  muted: "#7a8082",     // cool grey
+  faint: "#2e3235",     // very dark grey
+  student: "#5b8fa8",   // steel blue
+  studentBg: "#1a262e", // dark blue
+  leader: "#6b9e78",    // sage (same as accent)
+  leaderBg: "#1e2820",
+  prayedGreen: "#6b9e78",
+  prayedBg: "#1e2820",
+};
+
+/* ── Styles ─────────────────────────────────────────────── */
+const S = {
+  root: { minHeight: "100vh", background: C.bg, color: C.cream, fontFamily: "'Inter', system-ui, sans-serif", fontSize: 14, maxWidth: 480, margin: "0 auto", display: "flex", flexDirection: "column" },
+  header: { display: "flex", alignItems: "center", justifyContent: "space-between", padding: "20px 20px 0" },
+  logoWrap: { display: "flex", alignItems: "center", gap: 8 },
+  logoCross: { fontSize: 18, color: C.accent },
+  logoText: { fontFamily: "'Lora', Georgia, serif", fontSize: 24, fontWeight: 600, color: C.cream, letterSpacing: "0.01em" },
+  weekBar: { display: "flex", alignItems: "center", gap: 6, background: C.surface, border: `1px solid ${C.border}`, borderRadius: 20, padding: "5px 12px" },
+  weekText: { fontSize: 12, color: C.muted },
+  bdayAlert: { fontSize: 11, background: C.faint, color: C.accent, borderRadius: 10, padding: "2px 7px 2px 6px", display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 3, verticalAlign: "middle" },
+  progressTrack: { margin: "14px 20px 0", height: 3, background: C.faint, borderRadius: 2, overflow: "hidden" },
+  progressFill: { height: "100%", background: C.accent, borderRadius: 2, transition: "width 0.6s ease" },
+  tabs: { display: "flex", borderBottom: `1px solid ${C.border}`, margin: "14px 0 0" },
+  tab: { flex: 1, background: "none", border: "none", color: C.muted, padding: "10px 0", cursor: "pointer", fontFamily: "'Inter', system-ui, sans-serif", fontSize: 13, fontWeight: 400, letterSpacing: "0.04em", transition: "color 0.2s" },
+  tabActive: { color: C.cream, borderBottom: `2px solid ${C.accent}`, marginBottom: -1, fontWeight: 600 },
+  // PRAY
+  prayWrap: { flex: 1, display: "flex", flexDirection: "column", padding: "16px 20px 28px" },
+  controls: { display: "flex", alignItems: "center", gap: 8, marginBottom: 10 },
+  togglePill: { display: "flex", background: C.faint, borderRadius: 20, padding: 2 },
+  toggleOpt: { background: "none", border: "none", color: C.muted, padding: "5px 14px", borderRadius: 18, cursor: "pointer", fontSize: 12, fontFamily: "'Inter', system-ui, sans-serif", transition: "all 0.2s" },
+  toggleOptOn: { background: C.surface, color: C.cream, fontWeight: 500 },
+  filterSelect: { background: C.faint, border: `1px solid ${C.border}`, color: C.muted, borderRadius: 20, padding: "5px 12px", fontSize: 12, fontFamily: "'Inter', system-ui, sans-serif", cursor: "pointer", outline: "none", flex: 1 },
+  reshuffleBtn: { background: "none", border: `1px solid ${C.border}`, color: C.muted, borderRadius: 20, width: 32, height: 32, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0 },
+  bdayDismiss: { position:"absolute", right:8, top:"50%", transform:"translateY(-50%)", background:"none", border:"none", color:C.border, cursor:"pointer", fontSize:14, padding:"4px 6px", lineHeight:1 },
+  bdayBanner: { background: C.faint, border: `1px solid ${C.accent}`, borderRadius: 12, color: C.accentLight, padding: "12px 16px", fontSize: 13, fontWeight: 500, cursor: "pointer", fontFamily: "'Inter', system-ui, sans-serif", textAlign: "center", width: "100%", marginBottom: 8, animation: "bdayGlow 1.6s ease-in-out infinite" },
+  swipeHint: { fontSize: 11, color: C.faint, textAlign: "center", marginBottom: 8, letterSpacing: "0.05em" },
+  empty: { flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 10, paddingBottom: 60 },
+  emptyTitle: { fontFamily: "'Lora', Georgia, serif", fontSize: 22, color: C.muted, margin: 0 },
+  emptySub: { fontSize: 13, color: C.faint, margin: 0, textAlign: "center" },
+  cardOuter: { position: "relative", margin: "0 0 20px", touchAction: "pan-y" },
+  cardGhost: { position: "absolute", inset: 0, background: "#242729", borderRadius: 16, boxShadow: "0 4px 16px rgba(0,0,0,0.4)" },
+  card: { position: "relative", backgroundColor: C.card, background: `repeating-linear-gradient(${C.card}, ${C.card} 27px, #2e3235 27px, #2e3235 28px)`, backgroundPositionY: "52px", border: "1px solid rgba(255,255,255,0.06)", borderTop: `1px solid ${C.accent}33`, borderRadius: 16, padding: "28px 24px 22px", display: "flex", flexDirection: "column", gap: 0, boxShadow: `0 2px 0 ${C.accent}18 inset, 0 12px 48px rgba(0,0,0,0.6), 0 2px 8px rgba(0,0,0,0.4)`, userSelect: "none", willChange: "transform" },
+  cardDone: { background: "#1d2620", border: "1px solid rgba(107,158,120,0.2)", borderTop: "1px solid rgba(107,158,120,0.35)" },
+  badge: { display: "inline-flex", alignSelf: "flex-start", padding: "3px 11px", borderRadius: 12, fontSize: 11, fontWeight: 500, letterSpacing: "0.06em", textTransform: "uppercase", marginBottom: 14 },
+  studentBadge: { background: C.studentBg, color: C.student, border: `1px solid ${C.student}33` },
+  leaderBadge: { background: C.leaderBg, color: C.leader, border: `1px solid ${C.leader}33` },
+  cardName: { fontFamily: "'Lora', Georgia, serif", fontSize: 34, fontWeight: 500, lineHeight: 1.2, color: C.cream, margin: "6px 0 12px", letterSpacing: "-0.01em" },
+  bdayChip: { display: "inline-flex", alignItems: "center", background: C.faint, border: `1px solid ${C.border}`, color: C.accent, borderRadius: 10, padding: "5px 12px", fontSize: 14, marginBottom: 12, gap: 4 },
+  bdayChipUrgent: { background: C.accentBg, border: `1px solid ${C.accent}`, color: C.accentLight, fontWeight: 500 },
+  bdayQuiet: { display: "flex", alignItems: "center", gap: 4, fontSize: 13, color: C.muted, marginBottom: 10 },
+  cardPrayedRow: { marginBottom: 18, marginTop: 4 },
+  prayedChip: { fontSize: 12, color: C.prayedGreen, background: C.accentBg, padding: "3px 10px", borderRadius: 10 },
+  lastPrayedChip: { fontSize: 13, color: C.muted, lineHeight: 1.4 },
+  neverChip: { fontSize: 13, color: C.muted, fontStyle: "italic" },
+  reqBox: { background: C.faint, borderRadius: 10, padding: "12px 14px", marginBottom: 14 },
+  reqLabel: { fontSize: 10, color: C.muted, textTransform: "uppercase", letterSpacing: "0.1em", margin: "0 0 8px" },
+  reqItem: { display: "flex", alignItems: "flex-start", gap: 8, marginBottom: 6 },
+  reqDot: { color: C.accent, fontSize: 8, marginTop: 3, flexShrink: 0 },
+  reqText: { flex: 1, fontSize: 13, color: C.cream, lineHeight: 1.4 },
+  reqRemove: { background: "none", border: "none", color: C.muted, cursor: "pointer", padding: 2, display: "flex", flexShrink: 0 },
+  reqInputRow: { display: "flex", gap: 6, alignItems: "center", marginTop: 4 },
+  reqInput: { flex: 1, background: C.faint, border: `1px solid ${C.border}`, borderRadius: 8, color: C.cream, padding: "7px 10px", fontSize: 13, fontFamily: "'Inter', system-ui, sans-serif", outline: "none" },
+  reqAddBtn: { background: C.accent, border: "none", color: "#fff", borderRadius: 8, padding: "7px 12px", fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "'Inter', system-ui, sans-serif" },
+  reqCancelBtn: { background: "none", border: `1px solid ${C.border}`, color: C.muted, borderRadius: 8, width: 32, height: 32, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" },
+  addReqTrigger: { background: "none", border: `1px solid ${C.border}`, color: C.muted, borderRadius: 8, padding: "6px 12px", fontSize: 12, cursor: "pointer", display: "flex", alignItems: "center", alignSelf: "flex-start", marginTop: 8, fontFamily: "'Inter', system-ui, sans-serif" },
+  navRow: { display: "flex", alignItems: "center", justifyContent: "center", gap: 20, marginBottom: 16 },
+  navArrow: { background: C.surface, border: `1px solid ${C.border}`, color: C.muted, borderRadius: "50%", width: 44, height: 44, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" },
+  counter: { fontFamily: "'Lora', Georgia, serif", fontSize: 18, color: C.muted, minWidth: 60, textAlign: "center" },
+  prayBtn: { background: C.accent, border: "none", color: "#fff", borderRadius: 12, padding: "14px 0", fontSize: 15, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'Inter', system-ui, sans-serif", boxShadow: `0 4px 24px rgba(107,158,120,0.4)`, letterSpacing: "0.02em" },
+  prayedActions: { display: "flex", alignItems: "center", justifyContent: "center", gap: 12 },
+  prayedConfirm: { display: "flex", alignItems: "center", color: C.prayedGreen, fontSize: 15, fontWeight: 500 },
+  undoBtn: { background: "none", border: `1px solid ${C.border}`, color: C.muted, borderRadius: 8, padding: "6px 14px", fontSize: 12, cursor: "pointer", fontFamily: "'Inter', system-ui, sans-serif" },
+  // WEEK
+  weekWrap: { flex: 1, padding: "16px 20px 32px", display: "flex", flexDirection: "column", gap: 14, overflowY: "auto" },
+  weekTitle: { fontFamily: "'Lora', Georgia, serif", fontSize: 28, color: C.cream, margin: 0, fontWeight: 400 },
+  weekSection: { background: C.surface, border: `1px solid ${C.border}`, borderRadius: 14, overflow: "hidden" },
+  sectionHead: { display: "flex", alignItems: "center", padding: "11px 14px", borderBottom: `1px solid ${C.border}`, background: C.bg },
+  sectionTitle: { fontSize: 11, color: C.muted, textTransform: "uppercase", letterSpacing: "0.09em", fontWeight: 500 },
+  weekRow: { display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 14px", borderBottom: `1px solid ${C.faint}` },
+  weekName: { fontSize: 14, color: C.cream },
+  weekMeta: { fontSize: 11, color: C.muted, marginTop: 2 },
+  weekEmpty: { fontSize: 13, color: C.faint, padding: "16px 14px", margin: 0, textAlign: "center", fontStyle: "italic" },
+  allPrayedBanner: { display: "flex", flexDirection: "column", alignItems: "center", gap: 8, padding: "22px 14px" },
+  allPrayedText: { fontFamily: "'Lora', Georgia, serif", fontSize: 18, color: C.accent, textAlign: "center" },
+  // PEOPLE
+  peopleWrap: { flex: 1, padding: "16px 20px 28px", display: "flex", flexDirection: "column", gap: 10 },
+  addRow: { display: "flex", gap: 8 },
+  addInput: { flex: 1, background: C.surface, border: `1px solid ${C.border}`, borderRadius: 10, color: C.cream, padding: "10px 12px", fontSize: 13, fontFamily: "'Inter', system-ui, sans-serif", outline: "none" },
+  addTypeSelect: { background: C.surface, border: `1px solid ${C.border}`, color: C.muted, borderRadius: 10, padding: "10px 10px", fontSize: 12, fontFamily: "'Inter', system-ui, sans-serif", cursor: "pointer", outline: "none" },
+  addPersonBtn: { background: C.accent, border: "none", color: "#fff", borderRadius: 10, width: 42, height: 42, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0 },
+  statRow: { display: "flex", gap: 6 },
+  statChip: { flex: 1, background: C.surface, border: `1px solid ${C.border}`, borderRadius: 10, padding: "8px 0", display: "flex", flexDirection: "column", alignItems: "center", gap: 2 },
+  statNum: { fontSize: 18, fontFamily: "'Lora', Georgia, serif", color: C.cream },
+  statLbl: { fontSize: 10, color: C.muted, textTransform: "uppercase", letterSpacing: "0.06em" },
+  personList: { display: "flex", flexDirection: "column", gap: 4 },
+  personCard: { background: C.surface, border: `1px solid ${C.border}`, borderRadius: 10, overflow: "hidden" },
+  personRow: { display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 12px" },
+  personLeft: { display: "flex", flexDirection: "column", gap: 4 },
+  personName: { fontSize: 14, color: C.cream },
+  personMeta: { display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" },
+  badgeSm: { fontSize: 10, padding: "2px 8px", borderRadius: 8, textTransform: "uppercase", letterSpacing: "0.06em", fontWeight: 500 },
+  studentBadgeSm: { background: C.studentBg, color: C.student },
+  leaderBadgeSm: { background: C.leaderBg, color: C.leader },
+  prayedSmall: { fontSize: 11, color: C.prayedGreen },
+  reqCountBadge: { fontSize: 11, color: C.accent, background: C.faint, padding: "1px 7px", borderRadius: 8 },
+  bdayBadgeSm: { display: "inline-flex", alignItems: "center", fontSize: 10, color: C.muted, background: C.faint, padding: "1px 7px", borderRadius: 8 },
+  personActions: { display: "flex", gap: 6 },
+  iconBtn: { background: "none", border: `1px solid ${C.border}`, color: C.muted, borderRadius: 8, width: 30, height: 30, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" },
+  gradeBadge: { fontSize: 10, padding: "2px 7px", borderRadius: 8, background: C.faint, color: C.muted, fontWeight: 500 },
+  gradeBadgeLg: { background: C.faint, color: C.muted, border: `1px solid ${C.border}`, marginBottom: 0 },
+  gradeRow: { display: "flex", alignItems: "center", gap: 10, padding: "7px 12px", borderTop: `1px solid ${C.faint}`, background: C.surface },
+  gradeLabel: { fontSize: 11, color: C.muted, textTransform: "uppercase", letterSpacing: "0.06em", flexShrink: 0 },
+  gradeSelect: { background: C.bg, border: `1px solid ${C.border}`, borderRadius: 7, color: C.cream, padding: "4px 8px", fontSize: 13, fontFamily: "'Inter', system-ui, sans-serif", cursor: "pointer", outline: "none" },
+  promoteSection: { marginTop: 4 },
+  promoteBtn: { background: "none", border: `1px solid ${C.border}`, color: C.muted, borderRadius: 10, padding: "11px 16px", fontSize: 13, cursor: "pointer", fontFamily: "'Inter', system-ui, sans-serif", width: "100%", textAlign: "left" },
+  promoteConfirm: { background: C.surface, border: `1px solid ${C.border}`, borderRadius: 10, padding: "14px 16px", display: "flex", flexDirection: "column", gap: 12 },
+  promoteConfirmText: { fontSize: 13, color: C.cream, margin: 0, lineHeight: 1.5 },
+  nameRow: { display: "flex", alignItems: "center", gap: 6 },
+  editNameBtn: { background: "none", border: "none", color: C.muted, cursor: "pointer", fontSize: 13, padding: "0 2px", lineHeight: 1 },
+  nameEditRow: { display: "flex", alignItems: "center", gap: 6, marginBottom: 2 },
+  nameInput: { flex: 1, background: C.bg, border: `1px solid ${C.border}`, borderRadius: 8, color: C.cream, padding: "5px 8px", fontSize: 13, fontFamily: "'Inter', system-ui, sans-serif", outline: "none", minWidth: 0 },
+  bdayEditRow: { display: "flex", alignItems: "center", gap: 8, padding: "8px 12px", borderTop: `1px solid ${C.faint}`, background: C.surface },
+  bdayInput: { flex: 1, background: C.bg, border: `1px solid ${C.border}`, borderRadius: 8, color: C.cream, padding: "6px 10px", fontSize: 13, fontFamily: "'Inter', system-ui, sans-serif", outline: "none" },
+  inactiveSection: { marginTop: 8, borderTop: `1px solid ${C.border}`, paddingTop: 12 },
+  inactiveHeading: { fontSize: 11, color: C.muted, textTransform: "uppercase", letterSpacing: "0.08em", margin: "0 0 8px" },
+  inactiveRow: { display: "flex", alignItems: "center", justifyContent: "space-between", padding: "7px 0", borderBottom: `1px solid ${C.faint}` },
+  inactiveName: { fontSize: 13, color: C.muted },
+  restoreBtn: { background: "none", border: `1px solid ${C.border}`, color: C.leader, borderRadius: 7, padding: "4px 10px", fontSize: 11, cursor: "pointer", fontFamily: "'Inter', system-ui, sans-serif" },
+  deleteBtn: { background: "none", border: `1px solid rgba(138,80,80,0.4)`, color: "#8a5050", borderRadius: 7, padding: "4px 10px", fontSize: 11, cursor: "pointer", fontFamily: "'Inter', system-ui, sans-serif" },
+  // IMPORT
+  importWrap: { flex: 1, padding: "16px 20px 28px", display: "flex", flexDirection: "column", gap: 12, overflowY: "auto" },
+  importTitle: { fontFamily: "'Lora', Georgia, serif", fontSize: 26, color: C.cream, margin: 0, fontWeight: 400 },
+  importDesc: { fontSize: 13, color: C.muted, margin: 0 },
+  importNote: { fontSize: 12, color: C.muted, margin: "0" },
+  importRulesBox: { background: C.surface, border: `1px solid ${C.border}`, borderRadius: 12, padding: "4px 0", display: "flex", flexDirection: "column" },
+  importRule: { display: "flex", gap: 12, padding: "11px 14px", borderBottom: `1px solid ${C.faint}`, fontSize: 12, color: C.muted, lineHeight: 1.5, alignItems: "flex-start" },
+  importRuleIcon: { fontSize: 16, flexShrink: 0, marginTop: 1 },
+  code: { background: C.faint, padding: "1px 6px", borderRadius: 4, fontSize: 11, color: C.accent, fontFamily: "monospace" },
+  csvPreview: { background: C.surface, border: `1px solid ${C.border}`, borderRadius: 10, padding: "12px 14px", fontSize: 12, color: C.muted, margin: 0, lineHeight: 1.6, fontFamily: "monospace", overflowX: "auto" },
+  uploadBtn: { background: C.surface, border: `1px solid ${C.border}`, color: C.cream, borderRadius: 10, padding: "12px 20px", fontSize: 13, cursor: "pointer", display: "flex", alignItems: "center", fontFamily: "'Inter', system-ui, sans-serif", alignSelf: "flex-start" },
+  previewBox: { background: C.surface, border: `1px solid ${C.border}`, borderRadius: 12, padding: "14px 16px" },
+  previewTitle: { fontSize: 12, color: C.muted, margin: "0 0 10px", textTransform: "uppercase", letterSpacing: "0.06em" },
+  previewScroll: { display: "flex", flexDirection: "column", gap: 4, maxHeight: 200, overflowY: "auto" },
+  previewRow: { display: "flex", alignItems: "center", justifyContent: "space-between", padding: "5px 0", borderBottom: `1px solid ${C.faint}` },
+  previewName: { fontSize: 13, color: C.cream },
+  moreText: { fontSize: 12, color: C.muted, margin: "6px 0 0", textAlign: "center" },
+  previewBtnRow: { display: "flex", gap: 8, marginTop: 12 },
+  confirmBtn: { background: C.accent, border: "none", color: "#fff", borderRadius: 8, padding: "9px 20px", fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "'Inter', system-ui, sans-serif" },
+  cancelBtn: { background: "none", border: `1px solid ${C.border}`, color: C.muted, borderRadius: 8, padding: "9px 16px", fontSize: 13, cursor: "pointer", fontFamily: "'Inter', system-ui, sans-serif" },
+  // WEEKLY REPORT
+  reportBox: { background: C.surface, border: `1px solid ${C.border}`, borderRadius: 14, padding: "16px" },
+  reportTitle: { fontSize: 13, color: C.accent, fontWeight: 500, margin: "0 0 12px" },
+  reportEmpty: { fontSize: 12, color: C.muted, margin: 0, fontStyle: "italic" },
+  reportRow: { display: "flex", flexDirection: "column", gap: 4, marginBottom: 14 },
+  reportRowTop: { display: "flex", justifyContent: "space-between", alignItems: "baseline" },
+  reportWeekLabel: { fontSize: 12, color: C.muted },
+  reportCount: { fontSize: 16, fontFamily: "'Lora', Georgia, serif", color: C.cream },
+  reportBar: { height: 6, background: C.faint, borderRadius: 3, overflow: "hidden" },
+  reportBarFill: { height: "100%", background: `linear-gradient(90deg, ${C.accent}, ${C.accentLight})`, borderRadius: 3, transition: "width 0.6s ease" },
+  reportPct: { fontSize: 11, color: C.muted },
+  // REMINDERS
+  reminderSetupBtn: { background: "none", border: `1px solid ${C.border}`, color: C.muted, borderRadius: 10, padding: "10px 14px", fontSize: 13, cursor: "pointer", fontFamily: "'Inter', system-ui, sans-serif", textAlign: "left" },
+  iosDismiss: { background: "none", border: `1px solid ${C.border}`, color: C.muted, borderRadius: 8, padding: "7px 14px", fontSize: 12, cursor: "pointer", fontFamily: "'Inter', system-ui, sans-serif", alignSelf: "flex-start", marginTop: 4 },
+  timeInput: { background: C.bg, border: `1px solid ${C.border}`, borderRadius: 8, color: C.cream, padding: "6px 10px", fontSize: 13, fontFamily: "'Inter', system-ui, sans-serif", outline: "none", cursor: "pointer" },
+    reminderOffBtn: { background: "none", border: `1px solid ${C.border}`, color: "#8a5050", borderRadius: 10, padding: "9px 0", fontSize: 12, cursor: "pointer", fontFamily: "'Inter', system-ui, sans-serif" },
+  // ADMIN FOOTER
+  adminFooter: { display: "flex", justifyContent: "center", padding: "12px 0 20px", marginTop: "auto" },
+  adminLink: { background: "none", border: "none", color: C.border, fontSize: 11, cursor: "pointer", fontFamily: "'Inter', system-ui, sans-serif", letterSpacing: "0.06em" },
+  // MODAL
+  modalOverlay: { position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 100, padding: 24 },
+  modalBox: { background: C.surface, border: `1px solid ${C.border}`, borderRadius: 16, padding: "28px 24px", width: "100%", maxWidth: 320, display: "flex", flexDirection: "column", gap: 14 },
+  modalTitle: { fontFamily: "'Lora', Georgia, serif", fontSize: 22, color: C.cream, margin: 0, textAlign: "center" },
+  modalInput: { background: C.bg, border: `1px solid ${C.border}`, borderRadius: 10, color: C.cream, padding: "12px 14px", fontSize: 16, fontFamily: "'Inter', system-ui, sans-serif", outline: "none", textAlign: "center", letterSpacing: "0.08em" },
+  modalError: { fontSize: 12, color: "#c07070", margin: 0, textAlign: "center" },
+  modalBtns: { display: "flex", gap: 8 },
+  // DROPDOWN
+  ddWrap: { marginTop: 12, display: "flex", flexDirection: "column" },
+  ddToggle: { background: C.surface, border: `1px solid ${C.border}`, borderRadius: 10, color: C.muted, padding: "10px 14px", fontSize: 13, cursor: "pointer", fontFamily: "'Inter', system-ui, sans-serif", display: "flex", justifyContent: "space-between", alignItems: "center" },
+  ddList: { background: C.surface, border: `1px solid ${C.border}`, borderTop: "none", borderRadius: "0 0 10px 10px", maxHeight: 260, overflowY: "auto", display: "flex", flexDirection: "column" },
+  ddItem: { background: "none", border: "none", borderBottom: `1px solid ${C.faint}`, color: C.cream, padding: "11px 14px", fontSize: 13, cursor: "pointer", fontFamily: "'Inter', system-ui, sans-serif", display: "flex", justifyContent: "space-between", alignItems: "center", textAlign: "left" },
+  ddItemPrayed: { color: C.muted },
+  ddItemMeta: { fontSize: 11, color: C.muted, marginLeft: 8, flexShrink: 0, background: C.faint, borderRadius: 6, padding: "2px 7px" },
+  // TAP TO BEGIN
+  tapCard: { cursor: "pointer", alignItems: "center", justifyContent: "center", minHeight: 220, gap: 10, animation: "tapPulse 2s ease-in-out infinite" },
+  tapCross: { fontSize: 28, color: C.accent, marginBottom: 8 },
+  tapTitle: { fontFamily: "'Lora', Georgia, serif", fontSize: 36, fontWeight: 400, color: C.cream, margin: 0, textAlign: "center" },
+  tapSub: { fontSize: 13, color: C.muted, margin: 0, textAlign: "center" },
+  // GROUP BADGES
+  badgeRow: { display: "flex", gap: 6, marginBottom: 14 },
+  hsBadge: { background: C.studentBg, color: "#7aafc4", border: "1px solid #7aafc433", marginBottom: 0 },
+  msBadge: { background: C.faint, color: "#8eba95", border: "1px solid #6b9e7833", marginBottom: 0 },
+  hsBadgeSm: { background: C.studentBg, color: "#7aafc4" },
+  msBadgeSm: { background: C.faint, color: "#8eba95" },
+};
