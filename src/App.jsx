@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
+
 import { ChevronLeft, ChevronRight, Heart, Plus, Trash2, Upload, X, RefreshCw, BookOpen, RotateCcw, Cake, BarChart2, Bell, Star, Lightbulb } from "lucide-react";
 
 const STORAGE_KEY = "intercede-people-v2";
@@ -589,6 +590,8 @@ function AppMain({ settings }) {
   const [addName, setAddName] = useState("");
   const [addType, setAddType] = useState("student");
   const [addGroup, setAddGroup] = useState("hs");
+  const [addSmallGroupLeader, setAddSmallGroupLeader] = useState("");
+  const [currentLeaderId, setCurrentLeaderId] = useState(() => localStorage.getItem("letspray-current-leader") || "");
   const [search, setSearch] = useState("");
   const [editBdayFor, setEditBdayFor] = useState(null);
   const [editNameFor, setEditNameFor] = useState(null);
@@ -741,10 +744,11 @@ function AppMain({ settings }) {
     if (filter === "ms") list = list.filter(p => p.group === "ms");
     if (filter === "hs-students") list = list.filter(p => p.type === "student" && p.group === "hs");
     if (filter === "ms-students") list = list.filter(p => p.type === "student" && p.group === "ms");
+    if (filter === "my-group") list = list.filter(p => p.type === "student" && p.smallGroupLeader === currentLeaderId);
     if (filter === "hs-leaders") list = list.filter(p => p.type === "leader" && p.group === "hs");
     if (filter === "ms-leaders") list = list.filter(p => p.type === "leader" && p.group === "ms");
     return list;
-  }, [people, filter]);
+}, [people, filter, currentLeaderId]);
 
   const buildDeck = useCallback((filterOverride) => {
     const f = filterOverride ?? filter;
@@ -753,12 +757,18 @@ function AppMain({ settings }) {
     if (f === "leaders") list = list.filter(p => p.type === "leader");
     if (f === "hs") list = list.filter(p => p.group === "hs");
     if (f === "ms") list = list.filter(p => p.group === "ms");
+    if (f === "my-group") list = list.filter(p => p.type === "student" && p.smallGroupLeader === currentLeaderId);
     if (f === "hs-students") list = list.filter(p => p.type === "student" && p.group === "hs");
     if (f === "ms-students") list = list.filter(p => p.type === "student" && p.group === "ms");
     if (f === "hs-leaders") list = list.filter(p => p.type === "leader" && p.group === "hs");
     if (f === "ms-leaders") list = list.filter(p => p.type === "leader" && p.group === "ms");
     // Always exclude prayed-this-week from swipe deck
-    const unprayed = list.filter(p => !withinWeek(p.prayedAt));
+   const unprayed = list.filter(p => {
+  const prayedAt = f === "my-group" && currentLeaderId
+    ? p.leaderPrayerDates?.[currentLeaderId]
+    : p.prayedAt;
+  return !withinWeek(prayedAt);
+});
     const shuffled = shuffle(unprayed.map(p => p.id));
     // Move today's birthday person to front if they're in the deck
     const todayBdayId = unprayed.find(p => getBirthdayStatus(p.birthday)?.today)?.id;
@@ -772,7 +782,7 @@ function AppMain({ settings }) {
     setKeepPrayingMode(false);
     setDropdownOpen(false);
     if (shouldShowTap()) setReady(false); else setReady(true);
-  }, [people, filter]);
+}, [people, filter, currentLeaderId]);
 
   useEffect(() => { if (loaded) buildDeck(); }, [loaded, filter, order]);
 
@@ -780,16 +790,50 @@ function AppMain({ settings }) {
   useEffect(() => {
     if (!loaded) return;
     setDeckIds(prev => {
-      const prayedSet = new Set(activePeople.filter(p => withinWeek(p.prayedAt)).map(p => p.id));
+     const prayedSet = new Set(
+  activePeople
+    .filter(p => {
+      const prayedAt = filter === "my-group" && currentLeaderId
+        ? p.leaderPrayerDates?.[currentLeaderId]
+        : p.prayedAt;
+      return withinWeek(prayedAt);
+    })
+    .map(p => p.id)
+);
       const filtered = prev.filter(id => !prayedSet.has(id));
       if (filtered.length !== prev.length) { setCardIdx(i => Math.min(i, Math.max(filtered.length - 1, 0))); }
       return filtered;
     });
-  }, [people]);
+}, [people, filter, currentLeaderId]);
 
   const deck = (() => {
-    if (order === "alpha") return getFiltered().filter(p => !withinWeek(p.prayedAt)).slice().sort((a, b) => a.name.localeCompare(b.name));
-    if (order === "oldest") return getFiltered().filter(p => !withinWeek(p.prayedAt)).slice().sort((a, b) => (a.prayedAt || 0) - (b.prayedAt || 0));
+  if (order === "alpha") return getFiltered()
+  .filter(p => {
+    const prayedAt = filter === "my-group" && currentLeaderId
+      ? p.leaderPrayerDates?.[currentLeaderId]
+      : p.prayedAt;
+    return !withinWeek(prayedAt);
+  })
+  .slice()
+  .sort((a, b) => a.name.localeCompare(b.name));
+
+if (order === "oldest") return getFiltered()
+  .filter(p => {
+    const prayedAt = filter === "my-group" && currentLeaderId
+      ? p.leaderPrayerDates?.[currentLeaderId]
+      : p.prayedAt;
+    return !withinWeek(prayedAt);
+  })
+  .slice()
+  .sort((a, b) => {
+    const aDate = filter === "my-group" && currentLeaderId
+      ? a.leaderPrayerDates?.[currentLeaderId]
+      : a.prayedAt;
+    const bDate = filter === "my-group" && currentLeaderId
+      ? b.leaderPrayerDates?.[currentLeaderId]
+      : b.prayedAt;
+    return (aDate || 0) - (bDate || 0);
+  });
     const map = Object.fromEntries(activePeople.map(p => [p.id, p]));
     return deckIds.map(id => map[id]).filter(Boolean);
   })();
@@ -923,7 +967,11 @@ function AppMain({ settings }) {
       const weekStart = getWeekStartET();
       const inSameWeek = p.prayedAt && p.prayedAt >= weekStart;
       const weekDateStr = getWeekDateStringET();
-      return { ...p, prayedAt: Date.now(), prayedWeek: weekStart, prayedWeekDate: weekDateStr, prayCount: (p.prayCount || 0) + 1, weekPrayCount: inSameWeek ? (p.weekPrayCount || 1) + 1 : 1, updatedAt: Date.now() };
+      const leaderPrayerDates = { ...(p.leaderPrayerDates || {}) };
+if (currentLeaderId) {
+  leaderPrayerDates[currentLeaderId] = Date.now();
+}
+      return { ...p, leaderPrayerDates, prayedAt: Date.now(), prayedWeek: weekStart, prayedWeekDate: weekDateStr, prayCount: (p.prayCount || 0) + 1, weekPrayCount: inSameWeek ? (p.weekPrayCount || 1) + 1 : 1, updatedAt: Date.now() };
     }));
     if (current?.id) dismissBday(current.id);
     setPinnedPersonId(null);
@@ -952,12 +1000,33 @@ function AppMain({ settings }) {
   const [rosterGroup, setRosterGroup] = useState("all"); // all | ms | hs | leader
   const [rosterSort, setRosterSort] = useState("name"); // name | grade | birthday
 
+  function chooseCurrentLeader(leaderId) {
+  setCurrentLeaderId(leaderId);
+
+  if (leaderId) {
+    localStorage.setItem("letspray-current-leader", leaderId);
+  } else {
+    localStorage.removeItem("letspray-current-leader");
+  }
+}
   function addPerson() {
     if (!addName.trim()) return;
-    setPeople(prev => [...prev, { id: genId(), name: addName.trim(), type: addType, group: addType === "student" ? addGroup : null, grade: addType === "student" && addGrade ? Number(addGrade) : null, active: true, prayedAt: null, prayerRequests: [], birthday: addBday.trim() || "", updatedAt: Date.now() }]);
-    setAddBday("");
+setPeople(prev => [...prev, {
+  id: genId(),
+  name: addName.trim(),
+  type: addType,
+  group: addType === "student" ? addGroup : null,
+  smallGroupLeader: addType === "student" ? addSmallGroupLeader : "",
+  grade: addType === "student" && addGrade ? Number(addGrade) : null,
+  active: true,
+  prayedAt: null,
+  prayerRequests: [],
+  birthday: addBday.trim() || "",
+  updatedAt: Date.now()
+}]);    setAddBday("");
     setAddName("");
-    setAddGrade("");
+    setAddGrade(""); 
+    setAddSmallGroupLeader("");
   }
 
   function cycleGroup(id) {
@@ -1181,6 +1250,21 @@ function AppMain({ settings }) {
       {/* ─── PRAY ─── */}
       {view === "pray" && (
         <div style={S.prayWrap}>
+         <div style={{ marginBottom:12 }}>
+  <select
+    value={currentLeaderId}
+    onChange={e => chooseCurrentLeader(e.target.value)}
+    style={{ ...S.filterSelect, width:"100%" }}
+  >
+    <option value="">Who are you?</option>
+    {people
+      .filter(p => p.active !== false && p.type === "leader")
+      .sort((a, b) => a.name.localeCompare(b.name))
+      .map(p => (
+        <option key={p.id} value={p.id}>{p.name}</option>
+      ))}
+  </select>
+</div>
           <div style={S.controls}>
             <div style={S.togglePill}>
               <button onClick={() => { setOrder("random"); buildDeck(); }} style={{ ...S.toggleOpt, ...(order === "random" ? S.toggleOptOn : {}) }}>Shuffle</button>
@@ -1189,6 +1273,7 @@ function AppMain({ settings }) {
             </div>
             <select value={filter} onChange={e => { setFilter(e.target.value); setCardIdx(0); if (shouldShowTap()) setReady(false); }} style={S.filterSelect}>
               <option value="all">Everyone</option>
+              <option value="my-group">My Group</option>
               <option value="ms-students">MS Students</option>
               <option value="hs-students">HS Students</option>
               <option value="leaders">Leaders</option>
@@ -1508,7 +1593,23 @@ function AppMain({ settings }) {
                   {[5,6,7,8,9,10,11,12].map(g => <option key={g} value={g}>{g}</option>)}
                 </select>
               )}
-            </div>
+</div>
+
+{addType === "student" && (
+  <select
+    value={addSmallGroupLeader}
+    onChange={e => setAddSmallGroupLeader(e.target.value)}
+    style={{ ...S.addTypeSelect, width:"100%" }}
+  >
+    <option value="">No Small Group Leader</option>
+    {people
+      .filter(p => p.active !== false && p.type === "leader")
+      .sort((a, b) => a.name.localeCompare(b.name))
+      .map(p => (
+        <option key={p.id} value={p.id}>{p.name}</option>
+      ))}
+  </select>
+)}
             <div style={{ display:"flex", gap:8 }}>
               <input value={addBday} onChange={e => setAddBday(e.target.value)} placeholder="Birthday MM-DD (optional)" style={{ ...S.addInput, flex:1, margin:0, fontSize:13 }} />
               <button onClick={addPerson} style={{ ...S.addPersonBtn, width:44, height:44 }}><Plus size={18} /></button>
@@ -1609,16 +1710,48 @@ function AppMain({ settings }) {
                     {p.birthday && <button onClick={() => saveBirthday(p.id, "")} style={S.reqCancelBtn} title="Clear"><X size={12} /></button>}
                   </div>
                 )}
-                {p.type === "student" && (
-                  <div style={S.gradeRow}>
-                    <span style={S.gradeLabel}>Grade</span>
-                    <select value={p.grade || ""} onChange={e => setPeople(prev => prev.map(q => q.id === p.id ? { ...q, grade: e.target.value ? Number(e.target.value) : null, updatedAt: Date.now() } : q))}
-                      style={S.gradeSelect}>
-                      <option value="">—</option>
-                      {[5,6,7,8,9,10,11,12].map(g => <option key={g} value={g}>{`Grade ${g}`}</option>)}
-                    </select>
-                  </div>
-                )}
+              {p.type === "student" && (
+  <>
+    <div style={S.gradeRow}>
+      <span style={S.gradeLabel}>Grade</span>
+      <select
+        value={p.grade || ""}
+        onChange={e => setPeople(prev => prev.map(q =>
+          q.id === p.id
+            ? { ...q, grade: e.target.value ? Number(e.target.value) : null, updatedAt: Date.now() }
+            : q
+        ))}
+        style={S.gradeSelect}
+      >
+        <option value="">—</option>
+        {[5,6,7,8,9,10,11,12].map(g => (
+          <option key={g} value={g}>{`Grade ${g}`}</option>
+        ))}
+      </select>
+    </div>
+
+    <div style={{ ...S.gradeRow, marginTop:6 }}>
+      <span style={S.gradeLabel}>Small Group</span>
+      <select
+        value={p.smallGroupLeader || ""}
+        onChange={e => setPeople(prev => prev.map(q =>
+          q.id === p.id
+            ? { ...q, smallGroupLeader: e.target.value, updatedAt: Date.now() }
+            : q
+        ))}
+        style={S.gradeSelect}
+      >
+        <option value="">No Leader</option>
+        {people
+          .filter(q => q.active !== false && q.type === "leader")
+          .sort((a, b) => a.name.localeCompare(b.name))
+          .map(q => (
+            <option key={q.id} value={q.id}>{q.name}</option>
+          ))}
+      </select>
+    </div>
+  </>
+)}
               </div>
             ))}
           </div>
